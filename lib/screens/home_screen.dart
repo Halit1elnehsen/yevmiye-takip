@@ -12,6 +12,7 @@ import 'package:yevmiye_takip/screens/settings_screen.dart';
 import 'package:yevmiye_takip/providers/settings_provider.dart';
 import 'package:yevmiye_takip/utils/notification_helper.dart';
 import 'package:yevmiye_takip/screens/alarm_screen.dart';
+import 'package:yevmiye_takip/providers/localization_provider.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -50,9 +51,9 @@ class _HomeScreenState extends State<HomeScreen> {
     ];
 
     final List<String> titles = [
-      'İşçi Listesi',
-      'Günlük Yevmiye',
-      'Günlük Alarm',
+      context.watch<LocalizationProvider>().translate('workers'),
+      context.watch<LocalizationProvider>().translate('daily_tracking'),
+      context.watch<LocalizationProvider>().translate('alarms'),
     ];
 
     return Scaffold(
@@ -69,7 +70,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 Provider.of<WorkerProvider>(context, listen: false).loadWorkers();
               });
             },
-            tooltip: 'Ayarlar',
+            tooltip: context.watch<LocalizationProvider>().translate('settings'),
           ),
         ],
       ),
@@ -81,21 +82,21 @@ class _HomeScreenState extends State<HomeScreen> {
             _currentIndex = index;
           });
         },
-        destinations: const [
+        destinations: [
           NavigationDestination(
-            icon: Icon(Icons.people_outline),
-            selectedIcon: Icon(Icons.people),
-            label: 'İşçiler',
+            icon: const Icon(Icons.people_outline),
+            selectedIcon: const Icon(Icons.people),
+            label: context.watch<LocalizationProvider>().translate('workers'),
           ),
           NavigationDestination(
-            icon: Icon(Icons.today_outlined),
-            selectedIcon: Icon(Icons.today),
-            label: 'Yevmiye Yaz',
+            icon: const Icon(Icons.today_outlined),
+            selectedIcon: const Icon(Icons.today),
+            label: context.watch<LocalizationProvider>().translate('daily_tracking'),
           ),
           NavigationDestination(
-            icon: Icon(Icons.alarm),
-            selectedIcon: Icon(Icons.alarm_on),
-            label: 'Alarm',
+            icon: const Icon(Icons.alarm),
+            selectedIcon: const Icon(Icons.alarm_on),
+            label: context.watch<LocalizationProvider>().translate('alarms'),
           ),
         ],
       ),
@@ -103,7 +104,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ? FloatingActionButton.extended(
               onPressed: () => _navigateToAddWorker(),
               icon: const Icon(Icons.add),
-              label: const Text('Yeni İşçi Ekle'),
+              label: Text(context.watch<LocalizationProvider>().translate('add_worker')),
               backgroundColor: Theme.of(context).primaryColor,
             )
           : null,
@@ -121,7 +122,7 @@ class _HomeScreenState extends State<HomeScreen> {
           child: TextField(
             controller: _searchController,
             decoration: InputDecoration(
-              hintText: 'İşçi adı ara...',
+              hintText: context.watch<LocalizationProvider>().translate('search'),
               prefixIcon: const Icon(Icons.search, color: Colors.grey),
               suffixIcon: _searchController.text.isNotEmpty
                   ? IconButton(
@@ -158,8 +159,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       const SizedBox(height: 16),
                       Text(
                         _searchController.text.isNotEmpty
-                            ? 'Arama kriterine uygun işçi bulunamadı.'
-                            : 'Kayıtlı işçi bulunmuyor.',
+                            ? context.watch<LocalizationProvider>().translate('no_workers_found')
+                            : context.watch<LocalizationProvider>().translate('no_workers'),
                         style: const TextStyle(fontSize: 16, color: Colors.grey),
                       ),
                       if (_searchController.text.isEmpty) ...[
@@ -167,7 +168,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ElevatedButton.icon(
                           onPressed: () => _navigateToAddWorker(),
                           icon: const Icon(Icons.add),
-                          label: const Text('İlk İşçiyi Ekle'),
+                          label: Text(context.watch<LocalizationProvider>().translate('add_first_worker')),
                         ),
                       ]
                     ],
@@ -196,7 +197,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         workerProv.loadWorkers();
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: Text('${worker.name} için bugün tam gün yevmiye yazıldı.'),
+                            content: Text(context.read<LocalizationProvider>().translate('wage_added_success').replaceAll('{name}', worker.name)),
                             duration: const Duration(seconds: 2),
                           ),
                         );
@@ -257,7 +258,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   const Icon(Icons.payments, size: 20, color: Colors.grey),
                   const SizedBox(width: 8),
-                  Text('Günlük Ücret: ${worker.dailyWage.toInt()} ₺'),
+                  Text(context.watch<LocalizationProvider>().translate('daily_wage_detail').replaceAll('{wage}', worker.dailyWage.toInt().toString())),
                 ],
               ),
               const SizedBox(height: 12),
@@ -265,7 +266,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   const Icon(Icons.circle, size: 16, color: Colors.green),
                   const SizedBox(width: 8),
-                  Text(worker.isActive ? 'Aktif Çalışan' : 'Pasif Çalışan'),
+                  Text(worker.isActive ? context.watch<LocalizationProvider>().translate('active_worker') : context.watch<LocalizationProvider>().translate('passive_worker')),
                 ],
               ),
             ],
@@ -273,14 +274,14 @@ class _HomeScreenState extends State<HomeScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Kapat'),
+              child: Text(context.watch<LocalizationProvider>().translate('close')),
             ),
             ElevatedButton(
               onPressed: () {
                 Navigator.pop(context);
                 _navigateToEditWorker(worker);
               },
-              child: const Text('Düzenle'),
+              child: Text(context.watch<LocalizationProvider>().translate('edit')),
             ),
           ],
         );
@@ -288,3 +289,4 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 }
+

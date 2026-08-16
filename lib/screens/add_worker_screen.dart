@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:yevmiye_takip/models/worker.dart';
 import 'package:yevmiye_takip/providers/worker_provider.dart';
 import 'package:yevmiye_takip/widgets/custom_button.dart';
+import 'package:yevmiye_takip/providers/localization_provider.dart';
 
 class AddWorkerScreen extends StatefulWidget {
   final Worker? worker;
@@ -45,7 +46,7 @@ class _AddWorkerScreenState extends State<AddWorkerScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(isEditMode ? 'İşçi Düzenle' : 'Yeni İşçi Ekle'),
+        title: Text(isEditMode ? context.watch<LocalizationProvider>().translate('edit_worker') : context.watch<LocalizationProvider>().translate('add_worker')),
       ),
       body: SingleChildScrollView(
         child: Padding(
@@ -58,16 +59,16 @@ class _AddWorkerScreenState extends State<AddWorkerScreen> {
                 // İsim Alanı
                 TextFormField(
                   controller: _nameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Ad Soyad',
-                    hintText: 'Örn: Ahmet Yılmaz',
-                    prefixIcon: Icon(Icons.person),
+                  decoration: InputDecoration(
+                    labelText: context.watch<LocalizationProvider>().translate('name'),
+                    hintText: context.watch<LocalizationProvider>().translate('name_hint'),
+                    prefixIcon: const Icon(Icons.person),
                   ),
                   textCapitalization: TextCapitalization.words,
                   style: const TextStyle(fontSize: 16),
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
-                      return 'Lütfen işçi adını girin';
+                      return context.read<LocalizationProvider>().translate('name_error');
                     }
                     return null;
                   },
@@ -77,10 +78,10 @@ class _AddWorkerScreenState extends State<AddWorkerScreen> {
                 // Telefon Alanı
                 TextFormField(
                   controller: _phoneController,
-                  decoration: const InputDecoration(
-                    labelText: 'Telefon Numarası',
-                    hintText: 'Örn: 05551234567',
-                    prefixIcon: Icon(Icons.phone),
+                  decoration: InputDecoration(
+                    labelText: context.watch<LocalizationProvider>().translate('phone'),
+                    hintText: context.watch<LocalizationProvider>().translate('phone_hint'),
+                    prefixIcon: const Icon(Icons.phone),
                   ),
                   keyboardType: TextInputType.phone,
                   style: const TextStyle(fontSize: 16),
@@ -90,19 +91,19 @@ class _AddWorkerScreenState extends State<AddWorkerScreen> {
                 // Günlük Ücret Alanı
                 TextFormField(
                   controller: _wageController,
-                  decoration: const InputDecoration(
-                    labelText: 'Günlük Ücret (₺)',
-                    hintText: 'Örn: 1500',
-                    prefixIcon: Icon(Icons.money),
+                  decoration: InputDecoration(
+                    labelText: context.watch<LocalizationProvider>().translate('daily_wage'),
+                    hintText: context.watch<LocalizationProvider>().translate('wage_hint'),
+                    prefixIcon: const Icon(Icons.money),
                   ),
                   keyboardType: TextInputType.number,
                   style: const TextStyle(fontSize: 16),
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
-                      return 'Lütfen günlük ücret girin';
+                      return context.read<LocalizationProvider>().translate('wage_error1');
                     }
                     if (double.tryParse(value) == null || double.parse(value) <= 0) {
-                      return 'Lütfen geçerli bir ücret girin';
+                      return context.read<LocalizationProvider>().translate('wage_error2');
                     }
                     return null;
                   },
@@ -112,8 +113,8 @@ class _AddWorkerScreenState extends State<AddWorkerScreen> {
                 // Aktif/Pasif Durumu (Sadece düzenleme modunda)
                 if (isEditMode) ...[
                   SwitchListTile(
-                    title: const Text('Çalışan Aktif mi?'),
-                    subtitle: const Text('Pasif yapılırsa günlük takip listesinde görünmez.'),
+                    title: Text(context.watch<LocalizationProvider>().translate('is_active_question')),
+                    subtitle: Text(context.watch<LocalizationProvider>().translate('is_active_desc')),
                     value: _isActive,
                     activeColor: Theme.of(context).primaryColor,
                     onChanged: (val) {
@@ -129,7 +130,7 @@ class _AddWorkerScreenState extends State<AddWorkerScreen> {
 
                 // Kaydet Butonu
                 CustomButton(
-                  text: isEditMode ? 'Güncelle' : 'Kaydet',
+                  text: isEditMode ? context.watch<LocalizationProvider>().translate('update') : context.watch<LocalizationProvider>().translate('save'),
                   icon: Icons.save,
                   onPressed: _saveForm,
                   variant: ButtonVariant.primary,
@@ -139,7 +140,7 @@ class _AddWorkerScreenState extends State<AddWorkerScreen> {
                 // Silme Butonu (Sadece düzenleme modunda)
                 if (isEditMode)
                   CustomButton(
-                    text: 'İşçiyi Sil',
+                    text: context.watch<LocalizationProvider>().translate('delete_worker'),
                     icon: Icons.delete,
                     onPressed: _showDeleteConfirmDialog,
                     variant: ButtonVariant.danger,
@@ -169,7 +170,7 @@ class _AddWorkerScreenState extends State<AddWorkerScreen> {
         );
         workerProvider.updateWorker(updatedWorker);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('İşçi bilgileri güncellendi.')),
+          SnackBar(content: Text(context.read<LocalizationProvider>().translate('worker_updated'))),
         );
       } else {
         final newWorker = Worker(
@@ -179,7 +180,7 @@ class _AddWorkerScreenState extends State<AddWorkerScreen> {
         );
         workerProvider.addWorker(newWorker);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Yeni işçi başarıyla eklendi.')),
+          SnackBar(content: Text(context.read<LocalizationProvider>().translate('worker_added'))),
         );
       }
 
@@ -192,14 +193,14 @@ class _AddWorkerScreenState extends State<AddWorkerScreen> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('İşçiyi Sil'),
+          title: Text(context.read<LocalizationProvider>().translate('delete_worker')),
           content: Text(
-            '${widget.worker!.name} adlı işçiyi silmek istediğinize emin misiniz? Bu işçiye ait tüm geçmiş yevmiye ve avans kayıtları da silinecektir!',
+            context.read<LocalizationProvider>().translate('delete_worker_confirm').replaceAll('{name}', widget.worker!.name),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('İptal'),
+              child: Text(context.read<LocalizationProvider>().translate('cancel')),
             ),
             ElevatedButton(
               onPressed: () {
@@ -208,11 +209,11 @@ class _AddWorkerScreenState extends State<AddWorkerScreen> {
                 Navigator.pop(context); // Dialog kapat
                 Navigator.pop(context); // Ekranı kapat
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('İşçi başarıyla silindi.')),
+                  SnackBar(content: Text(context.read<LocalizationProvider>().translate('worker_deleted'))),
                 );
               },
               style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFE74C3C)),
-              child: const Text('Evet, Sil'),
+              child: Text(context.read<LocalizationProvider>().translate('yes_delete')),
             ),
           ],
         );

@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:yevmiye_takip/providers/worker_provider.dart';
 import 'package:yevmiye_takip/providers/record_provider.dart';
 import 'package:yevmiye_takip/widgets/daily_record_tile.dart';
+import 'package:yevmiye_takip/providers/localization_provider.dart';
 
 class DailyTrackingScreen extends StatefulWidget {
   const DailyTrackingScreen({Key? key}) : super(key: key);
@@ -15,7 +16,7 @@ class DailyTrackingScreen extends StatefulWidget {
 class _DailyTrackingScreenState extends State<DailyTrackingScreen> {
   late DateTime _selectedDate;
   final DateFormat _dateFormat = DateFormat('yyyy-MM-dd');
-  final DateFormat _displayFormat = DateFormat('dd MMMM yyyy, EEEE', 'tr_TR');
+
   bool _showUndoButton = false;
 
   @override
@@ -51,7 +52,15 @@ class _DailyTrackingScreenState extends State<DailyTrackingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final currencyFormatter = NumberFormat.currency(locale: 'tr_TR', symbol: '₺', decimalDigits: 0);
+    final locProv = Provider.of<LocalizationProvider>(context);
+    final String locale;
+    switch (locProv.currentLanguage) {
+      case 'en': locale = 'en_US'; break;
+      case 'ar': locale = 'ar'; break;
+      default: locale = 'tr_TR';
+    }
+    final displayFormat = DateFormat('dd MMMM yyyy, EEEE', locale);
+    final currencyFormatter = NumberFormat.currency(locale: locale, symbol: '₺', decimalDigits: 0);
 
     return Scaffold(
       body: Column(
@@ -71,7 +80,7 @@ class _DailyTrackingScreenState extends State<DailyTrackingScreen> {
                   child: Column(
                     children: [
                       Text(
-                        _displayFormat.format(_selectedDate),
+                        displayFormat.format(_selectedDate),
                         style: const TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.bold,
@@ -86,7 +95,7 @@ class _DailyTrackingScreenState extends State<DailyTrackingScreen> {
                             minimumSize: const Size(0, 30),
                             tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                           ),
-                          child: const Text('Bugüne Dön'),
+                          child: Text(context.watch<LocalizationProvider>().translate('return_today')),
                         ),
                     ],
                   ),
@@ -110,10 +119,10 @@ class _DailyTrackingScreenState extends State<DailyTrackingScreen> {
                 final workers = workerProv.workers;
 
                 if (workers.isEmpty) {
-                  return const Center(
+                  return Center(
                     child: Text(
-                      'Takip edilecek aktif çalışan bulunmuyor.',
-                      style: TextStyle(color: Colors.grey),
+                      context.watch<LocalizationProvider>().translate('no_active_workers_to_track'),
+                      style: const TextStyle(color: Colors.grey),
                     ),
                   );
                 }
@@ -168,12 +177,12 @@ class _DailyTrackingScreenState extends State<DailyTrackingScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Çalışan Sayısı',
+                                context.watch<LocalizationProvider>().translate('worker_count'),
                                 style: TextStyle(color: Colors.grey.shade400, fontSize: 13),
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                '$count / ${workerProv.workers.length} Kişi',
+                                '$count / ${workerProv.workers.length} ${context.watch<LocalizationProvider>().translate('person')}',
                                 style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                               ),
                             ],
@@ -182,7 +191,7 @@ class _DailyTrackingScreenState extends State<DailyTrackingScreen> {
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
                               Text(
-                                'Toplam Günlük Yevmiye',
+                                context.watch<LocalizationProvider>().translate('total_daily_wage'),
                                 style: TextStyle(color: Colors.grey.shade400, fontSize: 13),
                               ),
                               const SizedBox(height: 2),
@@ -211,13 +220,13 @@ class _DailyTrackingScreenState extends State<DailyTrackingScreen> {
                                   setState(() {
                                     _showUndoButton = false;
                                   });
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('Yevmiyeler geri alındı.')),
-                                  );
-                                },
-                                icon: const Icon(Icons.undo),
-                                label: const Text('Geri Al'),
-                              ),
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text(context.read<LocalizationProvider>().translate('wages_undone'))),
+                                    );
+                                  },
+                                  icon: const Icon(Icons.undo),
+                                  label: Text(context.watch<LocalizationProvider>().translate('undo')),
+                                ),
                             ),
                             const SizedBox(width: 12),
                           ],
@@ -230,7 +239,7 @@ class _DailyTrackingScreenState extends State<DailyTrackingScreen> {
                                   _showUndoButton = true;
                                 });
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Kalan işçiler Tam Gün olarak yazıldı.')),
+                                  SnackBar(content: Text(context.read<LocalizationProvider>().translate('remaining_completed_success'))),
                                 );
                               },
                               style: ElevatedButton.styleFrom(
@@ -238,7 +247,7 @@ class _DailyTrackingScreenState extends State<DailyTrackingScreen> {
                                 foregroundColor: Colors.white,
                               ),
                               icon: const Icon(Icons.done_all),
-                              label: const Text('Kalanları Tamamla'),
+                              label: Text(context.watch<LocalizationProvider>().translate('complete_remaining')),
                             ),
                           ),
                         ],
@@ -254,3 +263,4 @@ class _DailyTrackingScreenState extends State<DailyTrackingScreen> {
     );
   }
 }
+

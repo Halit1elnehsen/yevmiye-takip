@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:yevmiye_takip/providers/localization_provider.dart';
+import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:yevmiye_takip/models/worker.dart';
 import 'package:yevmiye_takip/models/daily_record.dart';
@@ -21,25 +23,25 @@ class WorkerCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final locProv = Provider.of<LocalizationProvider>(context);
     final currencyFormatter = NumberFormat.currency(locale: 'tr_TR', symbol: '₺', decimalDigits: 0);
     
-    // Bugün çalıştı mı renk durumunu belirle
     Color statusColor = Colors.grey.shade600;
-    String statusText = 'Yazılmadı';
+    String statusText = locProv.translate('not_recorded');
     
     if (todaysRecord != null) {
       switch (todaysRecord!.status) {
         case WorkStatus.completed:
           statusColor = const Color(0xFF2ECC71); // Yeşil
-          statusText = 'Tam Gün';
+          statusText = locProv.translate('full_day').replaceAll(' ✓', '');
           break;
         case WorkStatus.half:
           statusColor = const Color(0xFFF39C12); // Sarı/Turuncu
-          statusText = 'Yarım Gün';
+          statusText = locProv.translate('half_day').replaceAll(' ½', '');
           break;
         case WorkStatus.absent:
           statusColor = const Color(0xFFE74C3C); // Kırmızı
-          statusText = 'Gelmedi';
+          statusText = locProv.translate('absent').replaceAll(' ✗', '');
           break;
       }
     }
@@ -54,7 +56,6 @@ class WorkerCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Üst Kısım: İşçi Bilgisi ve Durum Noktası
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -125,11 +126,11 @@ class WorkerCard extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Toplam Çalışma: ${worker.totalDays.toStringAsFixed(worker.totalDays.truncateToDouble() == worker.totalDays ? 0 : 1)} Gün',
+                      '${locProv.translate('total_work')} ${worker.totalDays.toStringAsFixed(worker.totalDays.truncateToDouble() == worker.totalDays ? 0 : 1)} ${locProv.translate('day')}',
                       style: TextStyle(fontSize: 13, color: Colors.grey.shade300),
                     ),
                     Text(
-                      'Kazanç: ${currencyFormatter.format(worker.totalEarnings)}',
+                      '${locProv.translate('earnings')} ${currencyFormatter.format(worker.totalEarnings)}',
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
@@ -140,7 +141,6 @@ class WorkerCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 12),
-              // Orta Kısım: Günlük Ücret ve Hızlı İşlemler
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -148,7 +148,7 @@ class WorkerCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Günlük Ücret',
+                        locProv.translate('wage_label'),
                         style: TextStyle(
                           fontSize: 12,
                           color: Colors.grey.shade400,
@@ -167,21 +167,19 @@ class WorkerCard extends StatelessWidget {
                   ),
                   Row(
                     children: [
-                      // Düzenle butonu
                       IconButton(
                         onPressed: onEdit,
                         icon: const Icon(Icons.edit_outlined),
-                        tooltip: 'Düzenle',
+                        tooltip: locProv.translate('edit'),
                         style: IconButton.styleFrom(
                           backgroundColor: Colors.white10,
                         ),
                       ),
                       const SizedBox(width: 8),
-                      // Yevmiye yaz butonu
                       ElevatedButton.icon(
                         onPressed: onQuickWage,
                         icon: const Icon(Icons.check, size: 18),
-                        label: const Text('Yevmiye'),
+                        label: Text(locProv.translate('wage_button')),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF2ECC71),
                           foregroundColor: Colors.white,

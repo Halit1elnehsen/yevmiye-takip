@@ -6,6 +6,7 @@ import 'package:yevmiye_takip/providers/worker_provider.dart';
 import 'package:yevmiye_takip/providers/record_provider.dart';
 import 'package:yevmiye_takip/providers/settings_provider.dart';
 import 'package:yevmiye_takip/providers/alarm_provider.dart';
+import 'package:yevmiye_takip/providers/localization_provider.dart';
 import 'package:yevmiye_takip/utils/notification_helper.dart';
 // Web platformunda sqflite_common_ffi_web kullanılması gerekiyor
 import 'package:sqflite_common_ffi_web/sqflite_ffi_web.dart';
@@ -38,6 +39,9 @@ void main() async {
         ),
         ChangeNotifierProvider(
           create: (_) => AlarmProvider(),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => LocalizationProvider(),
         ),
       ],
       child: const YevmiyeTakipApp(),
