@@ -9,6 +9,9 @@ import 'package:yevmiye_takip/widgets/worker_card.dart';
 import 'package:yevmiye_takip/screens/add_worker_screen.dart';
 import 'package:yevmiye_takip/screens/daily_tracking_screen.dart';
 import 'package:yevmiye_takip/screens/settings_screen.dart';
+import 'package:yevmiye_takip/providers/settings_provider.dart';
+import 'package:yevmiye_takip/utils/notification_helper.dart';
+import 'package:yevmiye_takip/screens/alarm_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -39,17 +42,22 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Sadece 2 tab: İşçiler ve Yevmiye Yaz
+    // 3 tab: İşçiler, Yevmiye Yaz, Alarm
     final List<Widget> screens = [
       _buildWorkersTab(),
       const DailyTrackingScreen(),
+      const AlarmScreen(),
+    ];
+
+    final List<String> titles = [
+      'İşçi Listesi',
+      'Günlük Yevmiye',
+      'Günlük Alarm',
     ];
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          _currentIndex == 0 ? 'İşçi Listesi' : 'Günlük Yevmiye',
-        ),
+        title: Text(titles[_currentIndex]),
         actions: [
           IconButton(
             icon: const Icon(Icons.settings),
@@ -58,7 +66,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 context,
                 MaterialPageRoute(builder: (context) => const SettingsScreen()),
               ).then((_) {
-                // Ayarlar dönüşü listeyi yenile
                 Provider.of<WorkerProvider>(context, listen: false).loadWorkers();
               });
             },
@@ -84,6 +91,11 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: Icon(Icons.today_outlined),
             selectedIcon: Icon(Icons.today),
             label: 'Yevmiye Yaz',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.alarm),
+            selectedIcon: Icon(Icons.alarm_on),
+            label: 'Alarm',
           ),
         ],
       ),

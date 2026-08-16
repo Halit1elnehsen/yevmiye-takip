@@ -4,7 +4,9 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz_data;
 import 'package:yevmiye_takip/database/database_helper.dart';
+import 'package:yevmiye_takip/models/alarm.dart';
 
+/// Gerçek telefon alarmı gibi çalışan bildirim yardımcısı
 class NotificationHelper {
   static final FlutterLocalNotificationsPlugin _notificationsPlugin =
       FlutterLocalNotificationsPlugin();
@@ -28,9 +30,9 @@ class NotificationHelper {
 
       const DarwinInitializationSettings initializationSettingsIOS =
           DarwinInitializationSettings(
-        requestAlertPermission: false,
-        requestBadgePermission: false,
-        requestSoundPermission: false,
+        requestAlertPermission: true,
+        requestBadgePermission: true,
+        requestSoundPermission: true,
       );
 
       const InitializationSettings initializationSettings = InitializationSettings(
@@ -38,47 +40,154 @@ class NotificationHelper {
         iOS: initializationSettingsIOS,
       );
 
-      await _notificationsPlugin.initialize(initializationSettings);
+      await _notificationsPlugin.initialize(
+        initializationSettings,
+        onDidReceiveNotificationResponse: _onNotificationResponse,
+      );
     } catch (e) {
       debugPrint('Notification init error: $e');
+    }
+  }
+
+  /// Bildirime tıklandığında çalışacak callback
+  static void _onNotificationResponse(NotificationResponse response) {
+    debugPrint('Bildirime tıklandı: ${response.actionId}, payload: ${response.payload}');
+    // 'kapat' action'ına basılırsa alarmı sustur
+    if (response.actionId == 'kapat' && response.payload != null) {
+      int? id = int.tryParse(response.payload!);
+      if (id != null) {
+        cancelAlarm(id);
+      }
     }
   }
 
   /// Bildirim izinlerini iste
   static Future<bool> requestPermissions() async {
     if (kIsWeb) return false;
-    if (await Permission.notification.isDenied) {
-      final status = await Permission.notification.request();
-      return status.isGranted;
+
+    try {
+      // Bildirim izni
+      if (await Permission.notification.isDenied) {
+        final status = await Permission.notification.request();
+        if (!status.isGranted) return false;
+      }
+
+      // Android 13+ özel alarm izni
+      if (await Permission.scheduleExactAlarm.isDenied) {
+        await Permission.scheduleExactAlarm.request();
+      }
+
+      return true;
+    } catch (e) {
+      debugPrint('Permission request error: $e');
+      return false;
     }
-    return true;
   }
 
   /// Belirtilen saatte günlük alarm planla
-  /// Alarm çalmadan önce bugünün kayıtlarını kontrol eder
-  static Future<void> scheduleDailyReminder(int hour, int minute) async {
+  static Future<void> scheduleAlarm(Alarm alarm) async {
+    if (alarm.id == null) return;
     try {
       _initTimezone();
-      await cancelAllNotifications();
 
-      // Bugün için kayıt var mı kontrol et
-      final hasRecords = await _checkTodaysRecords();
-      if (hasRecords) {
-        debugPrint('Bugün için kayıt mevcut, alarm planlanmadı.');
-        return;
-      }
+      // Önce eski alarmı iptal et
+      await cancelAlarm(alarm.id!);
 
+      // Android bildirim ayarları — ALARM GİBİ ÇALSIN
       const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
-        'yevmiye_alarm_channel',
+        'yevmiye_alarm_channel_v2',      // Kanal ID (yenilendi ki ses ayarı güncellensin)
+        'Yevmiye Alarm',                 // Kanal adı
+        channelDescription: 'Yevmiye girmeyi hatırlatan günlük alarm',
+        importance: Importance.max,       // En yüksek önem
+        priority: Priority.high,          // En yüksek öncelik
+        playSound: true,                  // Ses çal
+        audioAttributesUsage: AudioAttributesUsage.alarm, // ALARM SESİ KULLAN
+        enableVibration: true,            // Titreşim aç
+        fullScreenIntent: true,           // Tam ekran göster (kilit ekranında bile)
+        category: AndroidNotificationCategory.alarm, // Alarm kategorisi
+        visibility: NotificationVisibility.public,    // Kilit ekranında göster
+        ongoing: true,                    // Kaydırarak kapatılamaz
+        autoCancel: false,                // Otomatik kapanmaz
+        timeoutAfter: 60000,              // 60 saniye sonra otomatik dur
+        enableLights: true,               // LED ışık yak
+        ticker: 'Yevmiye Alarm Çalıyor!', // Erişilebilirlik metni
+        actions: <AndroidNotificationAction>[
+          AndroidNotificationAction(
+            'kapat',
+            'Alarmı Kapat',
+            showsUserInterface: true,
+            cancelNotification: true,
+          ),
+          AndroidNotificationAction(
+            'ac',
+            'Uygulamayı Aç',
+            showsUserInterface: true,
+          ),
+        ],
+      );
+
+      const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+        interruptionLevel: InterruptionLevel.critical, // Sessiz modda bile çal
+      );
+
+      const NotificationDetails platformDetails = NotificationDetails(
+        android: androidDetails,
+        iOS: iosDetails,
+      );
+
+      // Bir sonraki alarm zamanını hesapla
+      final scheduledDate = _nextInstanceOfTime(alarm.hour, alarm.minute);
+
+      await _notificationsPlugin.zonedSchedule(
+        alarm.id!,
+        '⏰ YEVMİYE ALARM! ⏰',
+        alarm.label.isNotEmpty ? alarm.label : 'Yevmiyeleri yazmayı unutma!',
+        scheduledDate,
+        platformDetails,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+        matchDateTimeComponents: DateTimeComponents.time,
+        payload: alarm.id.toString(),
+      );
+
+      debugPrint('✅ Alarm planlandı [ID: ${alarm.id}]: ${alarm.hour.toString().padLeft(2, '0')}:${alarm.minute.toString().padLeft(2, '0')}');
+    } catch (e) {
+      debugPrint('Alarm schedule error: $e');
+    }
+  }
+
+  /// Alarmı test et — hemen çalsın (test amaçlı)
+  static Future<void> testAlarmNow() async {
+    try {
+      const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+        'yevmiye_alarm_channel_v2',
         'Yevmiye Alarm',
         channelDescription: 'Yevmiye girmeyi hatırlatan günlük alarm',
         importance: Importance.max,
         priority: Priority.high,
         playSound: true,
+        audioAttributesUsage: AudioAttributesUsage.alarm,
         enableVibration: true,
         fullScreenIntent: true,
         category: AndroidNotificationCategory.alarm,
         visibility: NotificationVisibility.public,
+        ongoing: true,
+        autoCancel: false,
+        timeoutAfter: 15000, // Test: 15 saniye sonra otomatik dur
+        enableLights: true,
+        ticker: 'Test Alarm Çalıyor!',
+        actions: <AndroidNotificationAction>[
+          AndroidNotificationAction(
+            'kapat',
+            'Alarmı Kapat',
+            showsUserInterface: true,
+            cancelNotification: true,
+          ),
+        ],
       );
 
       const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
@@ -92,29 +201,21 @@ class NotificationHelper {
         iOS: iosDetails,
       );
 
-      // Bir sonraki alarm zamanını hesapla
-      final scheduledDate = _nextInstanceOfTime(hour, minute);
-
-      await _notificationsPlugin.zonedSchedule(
-        0,
-        'Yevmiye Takip Vakti! ⏰',
-        'Usta, bugünün yevmiyelerini yazmayı unutma!',
-        scheduledDate,
+      await _notificationsPlugin.show(
+        999, // Test notification ID
+        '⏰ TEST ALARM! ⏰',
+        'Bu bir test alarmıdır. Gerçek alarm da böyle çalacak!',
         platformDetails,
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-        uiLocalNotificationDateInterpretation:
-            UILocalNotificationDateInterpretation.absoluteTime,
-        matchDateTimeComponents: DateTimeComponents.time,
       );
 
-      debugPrint('Alarm planlandı: $hour:$minute');
+      debugPrint('✅ Test alarmı çaldı!');
     } catch (e) {
-      debugPrint('Notification schedule error: $e');
+      debugPrint('Test alarm error: $e');
     }
   }
 
   /// Bugün için yevmiye kaydı var mı kontrol et
-  static Future<bool> _checkTodaysRecords() async {
+  static Future<bool> checkTodaysRecords() async {
     try {
       final today = DateTime.now();
       final dateStr = '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
@@ -138,8 +239,24 @@ class NotificationHelper {
     return scheduledDate;
   }
 
+  /// Alarmı iptal et
+  static Future<void> cancelAlarm(int id) async {
+    await _notificationsPlugin.cancel(id);
+  }
+
   /// Tüm bildirimleri iptal et
   static Future<void> cancelAllNotifications() async {
     await _notificationsPlugin.cancelAll();
+  }
+
+  /// Aktif alarm var mı kontrol et
+  static Future<bool> hasActiveAlarm(int id) async {
+    try {
+      final pendingRequests = await _notificationsPlugin.pendingNotificationRequests();
+      return pendingRequests.any((r) => r.id == id);
+    } catch (e) {
+      debugPrint('Check active alarm error: $e');
+      return false;
+    }
   }
 }

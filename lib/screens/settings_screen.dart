@@ -4,9 +4,14 @@ import 'package:yevmiye_takip/providers/settings_provider.dart';
 import 'package:yevmiye_takip/utils/backup_helper.dart';
 import 'package:yevmiye_takip/utils/notification_helper.dart';
 
-class SettingsScreen extends StatelessWidget {
+class SettingsScreen extends StatefulWidget {
   const SettingsScreen({Key? key}) : super(key: key);
 
+  @override
+  State<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -15,8 +20,6 @@ class SettingsScreen extends StatelessWidget {
       ),
       body: Consumer<SettingsProvider>(
         builder: (context, settingsProv, child) {
-          final timeText = '${settingsProv.notificationHour.toString().padLeft(2, '0')}:${settingsProv.notificationMinute.toString().padLeft(2, '0')}';
-
           return ListView(
             padding: const EdgeInsets.all(16.0),
             children: [
@@ -40,49 +43,6 @@ class SettingsScreen extends StatelessWidget {
                         subtitle: const Text('Daha önce aldığınız yedek dosyasından verilerinizi geri yükleyin.'),
                         onTap: () => _handleRestore(context),
                       ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              // ================= BİLDİRİMLER BÖLÜMÜ =================
-              _buildSectionTitle('Günlük Yevmiye Hatırlatma'),
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  child: Column(
-                    children: [
-                      SwitchListTile(
-                        secondary: const Icon(Icons.notifications_active, color: Color(0xFFF39C12)),
-                        title: const Text('Hatırlatıcı Bildirimler'),
-                        subtitle: const Text('Her gün belirlenen saatte yevmiye yazma bildirimi gönderir.'),
-                        value: settingsProv.notificationsEnabled,
-                        onChanged: (value) async {
-                          await settingsProv.setNotificationsEnabled(value);
-                          if (value) {
-                            final granted = await NotificationHelper.requestPermissions();
-                            if (granted) {
-                              await NotificationHelper.scheduleDailyReminder(
-                                settingsProv.notificationHour,
-                                settingsProv.notificationMinute,
-                              );
-                            }
-                          } else {
-                            await NotificationHelper.cancelAllNotifications();
-                          }
-                        },
-                      ),
-                      if (settingsProv.notificationsEnabled) ...[
-                        const Divider(height: 1, indent: 56),
-                        ListTile(
-                          leading: const Icon(Icons.access_time, color: Colors.grey),
-                          title: const Text('Hatırlatma Saati'),
-                          subtitle: Text('Bildirim her gün $timeText saatinde gelecektir.'),
-                          trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                          onTap: () => _selectTime(context, settingsProv),
-                        ),
-                      ],
                     ],
                   ),
                 ),
@@ -121,9 +81,8 @@ class SettingsScreen extends StatelessWidget {
                       const SizedBox(height: 6),
                       _buildBulletPoint('Tamamen offline çalışma (İnternetsiz mod)'),
                       _buildBulletPoint('Kayıtları anlık SQLite veritabanında saklama'),
-                      _buildBulletPoint('Tarih filtresiyle PDF ve Excel rapor oluşturma'),
-                      _buildBulletPoint('E-posta, WhatsApp ile rapor paylaşımı'),
                       _buildBulletPoint('JSON formatında yedek alma ve geri yükleme'),
+                      _buildBulletPoint('Günlük alarm hatırlatıcı sistemi'),
                     ],
                   ),
                 ),
@@ -164,17 +123,19 @@ class SettingsScreen extends StatelessWidget {
 
   Future<void> _handleBackup(BuildContext context) async {
     final success = await BackupHelper.backupData();
-    if (success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Yedek başarıyla alındı ve paylaşıldı.')),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Yedek alınırken hata oluştu!'),
-          backgroundColor: Color(0xFFE74C3C),
-        ),
-      );
+    if (mounted) {
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Yedek başarıyla alındı ve paylaşıldı.')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Yedek alınırken hata oluştu!'),
+            backgroundColor: Color(0xFFE74C3C),
+          ),
+        );
+      }
     }
   }
 
@@ -194,19 +155,21 @@ class SettingsScreen extends StatelessWidget {
             ),
             ElevatedButton(
               onPressed: () async {
-                Navigator.pop(context); // Dialog kapat
+                Navigator.pop(context);
                 final success = await BackupHelper.restoreData();
-                if (success) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Veriler yedekten başarıyla geri yüklendi! Uygulama güncellendi.')),
-                  );
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Geri yükleme başarısız veya iptal edildi.'),
-                      backgroundColor: Color(0xFFE74C3C),
-                    ),
-                  );
+                if (mounted) {
+                  if (success) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Veriler yedekten başarıyla geri yüklendi!')),
+                    );
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Geri yükleme başarısız veya iptal edildi.'),
+                        backgroundColor: Color(0xFFE74C3C),
+                      ),
+                    );
+                  }
                 }
               },
               style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF2ECC71)),
@@ -216,32 +179,5 @@ class SettingsScreen extends StatelessWidget {
         );
       },
     );
-  }
-
-  Future<void> _selectTime(BuildContext context, SettingsProvider settingsProv) async {
-    final pickedTime = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay(
-        hour: settingsProv.notificationHour,
-        minute: settingsProv.notificationMinute,
-      ),
-      helpText: 'Hatırlatma Saatini Seçin',
-      cancelText: 'İptal',
-      confirmText: 'Ayarla',
-    );
-
-    if (pickedTime != null) {
-      await settingsProv.setNotificationTime(pickedTime.hour, pickedTime.minute);
-      if (settingsProv.notificationsEnabled) {
-        await NotificationHelper.scheduleDailyReminder(pickedTime.hour, pickedTime.minute);
-      }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Günlük hatırlatma saati ${pickedTime.hour.toString().padLeft(2, '0')}:${pickedTime.minute.toString().padLeft(2, '0')} olarak güncellendi.',
-          ),
-        ),
-      );
-    }
   }
 }

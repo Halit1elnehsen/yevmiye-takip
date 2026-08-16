@@ -3,6 +3,7 @@ import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:yevmiye_takip/models/worker.dart';
 import 'package:yevmiye_takip/models/daily_record.dart';
+import 'package:yevmiye_takip/models/alarm.dart';
 
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
@@ -22,7 +23,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 2,
+      version: 3,
       onCreate: _createDB,
       onUpgrade: _onUpgrade,
       onConfigure: _onConfigure,
@@ -68,6 +69,18 @@ class DatabaseHelper {
       CREATE TABLE settings (
         key TEXT PRIMARY KEY,
         value TEXT
+      )
+    ''');
+
+    // 4. Alarmlar Tablosu (v3 ile eklendi)
+    await db.execute('''
+      CREATE TABLE alarms (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        hour INTEGER NOT NULL,
+        minute INTEGER NOT NULL,
+        is_active INTEGER DEFAULT 1,
+        label TEXT,
+        created_at TEXT NOT NULL
       )
     ''');
 
@@ -118,9 +131,76 @@ class DatabaseHelper {
         FROM daily_records_old
       ''');
 
-      // Eski tabloyu sil
       await db.execute('DROP TABLE daily_records_old');
     }
+
+    if (oldVersion < 3) {
+      // Alarmlar tablosunu ekle
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS alarms (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          hour INTEGER NOT NULL,
+          minute INTEGER NOT NULL,
+          is_active INTEGER DEFAULT 1,
+          label TEXT,
+          created_at TEXT NOT NULL
+        )
+      ''');
+
+      // Eski ayardaki alarmı tabloya taşı
+      final List<Map<String, dynamic>> maps = await db.query('settings');
+      int hour = 17;
+      int minute = 0;
+      bool isEnabled = false;
+
+      for (var map in maps) {
+        if (map['key'] == 'notification_hour') hour = int.tryParse(map['value']) ?? 17;
+        if (map['key'] == 'notification_minute') minute = int.tryParse(map['value']) ?? 0;
+        if (map['key'] == 'notification_enabled') isEnabled = map['value'] == '1';
+      }
+
+      if (isEnabled) {
+        await db.insert('alarms', {
+          'hour': hour,
+          'minute': minute,
+          'is_active': 1,
+          'label': 'Günlük Alarm',
+          'created_at': DateTime.now().toIso8601String(),
+        });
+      }
+    }
+  }
+
+  // ================= ALARM İŞLEMLERİ =================
+
+  Future<int> insertAlarm(Alarm alarm) async {
+    final db = await instance.database;
+    return await db.insert('alarms', alarm.toMap());
+  }
+
+  Future<List<Alarm>> getAllAlarms() async {
+    final db = await instance.database;
+    final maps = await db.query('alarms', orderBy: 'hour ASC, minute ASC');
+    return maps.map((map) => Alarm.fromMap(map)).toList();
+  }
+
+  Future<int> updateAlarm(Alarm alarm) async {
+    final db = await instance.database;
+    return await db.update(
+      'alarms',
+      alarm.toMap(),
+      where: 'id = ?',
+      whereArgs: [alarm.id],
+    );
+  }
+
+  Future<int> deleteAlarm(int id) async {
+    final db = await instance.database;
+    return await db.delete(
+      'alarms',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
   }
 
   // ================= İŞÇİ İŞLEMLERİ =================
