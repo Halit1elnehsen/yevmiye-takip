@@ -89,7 +89,20 @@ class AlarmScreen extends StatelessWidget {
   }
 
   Widget _buildAlarmTile(BuildContext context, Alarm alarm, AlarmProvider prov) {
-    final timeText = '${alarm.hour.toString().padLeft(2, '0')}:${alarm.minute.toString().padLeft(2, '0')}';
+    final locProv = Provider.of<LocalizationProvider>(context, listen: false);
+    final isTurkish = locProv.currentLanguage == 'tr';
+    
+    String timeText;
+    String amPm = '';
+    
+    if (isTurkish) {
+      timeText = '${alarm.hour.toString().padLeft(2, '0')}:${alarm.minute.toString().padLeft(2, '0')}';
+    } else {
+      int displayHour = alarm.hour % 12;
+      if (displayHour == 0) displayHour = 12;
+      amPm = alarm.hour >= 12 ? (locProv.translate('pm_format') ?? 'PM') : (locProv.translate('am_format') ?? 'AM');
+      timeText = '${displayHour.toString().padLeft(2, '0')}:${alarm.minute.toString().padLeft(2, '0')}';
+    }
     
     return Dismissible(
       key: Key('alarm_${alarm.id}'),
@@ -102,9 +115,6 @@ class AlarmScreen extends StatelessWidget {
       ),
       onDismissed: (direction) {
         prov.deleteAlarm(alarm.id!);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(context.read<LocalizationProvider>().translate('alarm_deleted'))),
-        );
       },
       child: GestureDetector(
         onTap: () {
@@ -116,43 +126,84 @@ class AlarmScreen extends StatelessWidget {
           );
         },
         child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 22),
           decoration: BoxDecoration(
-            color: const Color(0xFF16213E), // Tema kart rengi
-            borderRadius: BorderRadius.circular(20),
+            color: const Color(0xFF232323), // Lüks koyu gri
+            borderRadius: BorderRadius.circular(24),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    timeText,
-                    style: TextStyle(
-                      fontSize: 48,
-                      fontWeight: FontWeight.w300,
-                      color: alarm.isActive ? Colors.white : Colors.grey,
-                    ),
-                  ),
-                  if (alarm.label.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4.0),
-                      child: Text(
-                        alarm.label,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: alarm.isActive ? Colors.grey.shade400 : Colors.grey.shade700,
-                        ),
+              Expanded(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      timeText,
+                      style: TextStyle(
+                        fontSize: 42,
+                        fontWeight: FontWeight.w400,
+                        color: alarm.isActive ? Colors.white : Colors.grey.shade600,
+                        letterSpacing: -1,
                       ),
                     ),
-                ],
+                    if (!isTurkish)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Text(
+                          amPm,
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: alarm.isActive ? Colors.grey.shade400 : Colors.grey.shade700,
+                          ),
+                        ),
+                      ),
+                    if (alarm.label.isNotEmpty) ...[
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8, left: 8, right: 8),
+                        child: Text(
+                          '|',
+                          style: TextStyle(
+                            fontSize: 18,
+                            color: Colors.grey.shade700,
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: Text(
+                            alarm.label,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              color: alarm.isActive ? Colors.grey.shade500 : Colors.grey.shade800,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
               ),
               Switch(
                 value: alarm.isActive,
+                activeColor: Colors.white,
+                activeTrackColor: const Color(0xFFFF6B35), // Turuncu
+                inactiveThumbColor: Colors.grey.shade400,
+                inactiveTrackColor: Colors.grey.shade800,
                 onChanged: (value) async {
-                  await prov.toggleAlarm(alarm);
+                  final locProv = Provider.of<LocalizationProvider>(context, listen: false);
+                  await prov.toggleAlarm(
+                    alarm,
+                    title: locProv.translate('alarm_notification_title') ?? '⏰ YEVMİYE ALARM! ⏰',
+                    body: locProv.translate('alarm_notification_body') ?? 'Yevmiyeleri yazmayı unutma!',
+                    stop: locProv.translate('close') ?? 'Kapat',
+                  );
                   
                   // Eğer alarm açıldıysa kalan süreyi hesapla ve göster
                   if (value == true) {
@@ -167,7 +218,6 @@ class AlarmScreen extends StatelessWidget {
                     final hours = difference.inHours;
                     final minutes = difference.inMinutes % 60;
                     
-                    final locProv = Provider.of<LocalizationProvider>(context, listen: false);
                     String timeRemainingMsg = locProv.translate('time_left');
                     if (hours > 0) timeRemainingMsg += '$hours ${locProv.translate('hours')}';
                     if (minutes > 0) timeRemainingMsg += '$minutes ${locProv.translate('minutes')}';
@@ -190,7 +240,6 @@ class AlarmScreen extends StatelessWidget {
                     }
                   }
                 },
-                activeColor: const Color(0xFFFF6B35), // Tema turuncusu
               ),
             ],
           ),

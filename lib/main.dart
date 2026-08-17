@@ -7,7 +7,7 @@ import 'package:yevmiye_takip/providers/record_provider.dart';
 import 'package:yevmiye_takip/providers/settings_provider.dart';
 import 'package:yevmiye_takip/providers/alarm_provider.dart';
 import 'package:yevmiye_takip/providers/localization_provider.dart';
-import 'package:yevmiye_takip/utils/notification_helper.dart';
+import 'package:alarm/alarm.dart';
 // Web platformunda sqflite_common_ffi_web kullanılması gerekiyor
 import 'package:sqflite_common_ffi_web/sqflite_ffi_web.dart';
 import 'package:sqflite/sqflite.dart';
@@ -20,9 +20,9 @@ void main() async {
     databaseFactory = databaseFactoryFfiWeb;
   }
 
-  // Bildirim sistemini başlat (sadece mobilde çalışır)
+  // Alarm sistemini başlat (sadece mobilde çalışır)
   if (!kIsWeb) {
-    await NotificationHelper.init();
+    await Alarm.init();
   }
 
   runApp(

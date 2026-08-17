@@ -10,7 +10,6 @@ import 'package:yevmiye_takip/screens/add_worker_screen.dart';
 import 'package:yevmiye_takip/screens/daily_tracking_screen.dart';
 import 'package:yevmiye_takip/screens/settings_screen.dart';
 import 'package:yevmiye_takip/providers/settings_provider.dart';
-import 'package:yevmiye_takip/utils/notification_helper.dart';
 import 'package:yevmiye_takip/screens/alarm_screen.dart';
 import 'package:yevmiye_takip/providers/localization_provider.dart';
 

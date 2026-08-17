@@ -302,17 +302,33 @@ class _AddAlarmScreenState extends State<AddAlarmScreen> {
   void _saveAlarm() async {
     final prov = Provider.of<AlarmProvider>(context, listen: false);
     
+    final locProv = Provider.of<LocalizationProvider>(context, listen: false);
+    
     if (widget.alarm != null) {
       // Güncelle
       final updatedAlarm = widget.alarm!.copyWith(
         hour: _selectedHour,
         minute: _selectedMinute,
         label: _label,
+        ringtonePath: _ringtonePath,
       );
-      await prov.updateAlarm(updatedAlarm);
+      await prov.updateAlarm(
+        updatedAlarm,
+        title: locProv.translate('alarm_notification_title') ?? '⏰ YEVMİYE ALARM! ⏰',
+        body: locProv.translate('alarm_notification_body') ?? 'Yevmiyeleri yazmayı unutma!',
+        stop: locProv.translate('close') ?? 'Kapat',
+      );
     } else {
       // Yeni Ekle
-      await prov.addAlarm(_selectedHour, _selectedMinute, _label); // _ringtonePath de eklenebilir
+      await prov.addAlarm(
+        _selectedHour, 
+        _selectedMinute, 
+        _label, 
+        ringtonePath: _ringtonePath,
+        title: locProv.translate('alarm_notification_title') ?? '⏰ YEVMİYE ALARM! ⏰',
+        body: locProv.translate('alarm_notification_body') ?? 'Yevmiyeleri yazmayı unutma!',
+        stop: locProv.translate('close') ?? 'Kapat',
+      );
     }
     
     // Kalan süreyi hesapla
@@ -328,7 +344,6 @@ class _AddAlarmScreenState extends State<AddAlarmScreen> {
     final hours = difference.inHours;
     final minutes = difference.inMinutes % 60;
     
-    final locProv = Provider.of<LocalizationProvider>(context, listen: false);
     String timeRemainingMsg = locProv.translate('time_left');
     if (hours > 0) timeRemainingMsg += '$hours ${locProv.translate('hours')}';
     if (minutes > 0) timeRemainingMsg += '$minutes ${locProv.translate('minutes')}';

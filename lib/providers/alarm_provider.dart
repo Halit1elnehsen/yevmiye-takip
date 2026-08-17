@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:yevmiye_takip/database/database_helper.dart';
 import 'package:yevmiye_takip/models/alarm.dart';
-import 'package:yevmiye_takip/utils/notification_helper.dart';
+import 'package:alarm/alarm.dart' as alarm_pkg;
 
 class AlarmProvider with ChangeNotifier {
   List<Alarm> _alarms = [];
@@ -24,10 +24,10 @@ class AlarmProvider with ChangeNotifier {
       // Her alarm için aktifliğini sistemle senkronize et
       for (var alarm in _alarms) {
         if (alarm.isActive && alarm.id != null) {
-          // Eğer alarm veritabanında aktif ama sistemde değilse, sistemi güncelle
-          final isSysActive = await NotificationHelper.hasActiveAlarm(alarm.id!);
-          if (!isSysActive) {
-            await NotificationHelper.scheduleAlarm(alarm);
+          final isSysActive = alarm_pkg.Alarm.hasAlarm(); // Alarm package check is simpler, or Alarm.getAlarm(id) != null
+          final existingAlarm = alarm_pkg.Alarm.getAlarm(alarm.id!);
+          if (existingAlarm == null) {
+            await _scheduleAlarmWithPackage(alarm);
           }
         }
       }
@@ -39,11 +39,42 @@ class AlarmProvider with ChangeNotifier {
     }
   }
 
-  Future<void> addAlarm(int hour, int minute, String label) async {
+  Future<void> _scheduleAlarmWithPackage(Alarm alarm, {String title = '⏰ YEVMİYE ALARM! ⏰', String body = 'Yevmiyeleri yazmayı unutma!', String stop = 'Kapat'}) async {
+    if (alarm.id == null) return;
+    
+    final now = DateTime.now();
+    DateTime alarmTime = DateTime(now.year, now.month, now.day, alarm.hour, alarm.minute);
+    
+    if (alarmTime.isBefore(now)) {
+      alarmTime = alarmTime.add(const Duration(days: 1));
+    }
+
+    final alarmSettings = alarm_pkg.AlarmSettings(
+      id: alarm.id!,
+      dateTime: alarmTime,
+      assetAudioPath: alarm.ringtonePath ?? 'assets/marimba.mp3',
+      loopAudio: true,
+      vibrate: true,
+      volumeSettings: alarm_pkg.VolumeSettings.fade(volume: 1.0, fadeDuration: const Duration(seconds: 3)),
+      notificationSettings: alarm_pkg.NotificationSettings(
+        title: title,
+        body: alarm.label.isNotEmpty ? alarm.label : body,
+        stopButton: stop,
+        icon: 'notification_icon',
+      ),
+      warningNotificationOnKill: true,
+      androidFullScreenIntent: true,
+    );
+
+    await alarm_pkg.Alarm.set(alarmSettings: alarmSettings);
+  }
+
+  Future<void> addAlarm(int hour, int minute, String label, {String? ringtonePath, String title = '⏰ YEVMİYE ALARM! ⏰', String body = 'Yevmiyeleri yazmayı unutma!', String stop = 'Kapat'}) async {
     final alarm = Alarm(
       hour: hour,
       minute: minute,
       label: label,
+      ringtonePath: ringtonePath,
       createdAt: DateTime.now().toIso8601String(),
     );
 
@@ -58,15 +89,15 @@ class AlarmProvider with ChangeNotifier {
     });
 
     // İzin iste ve alarmı kur
-    final granted = await NotificationHelper.requestPermissions();
-    if (granted) {
-      await NotificationHelper.scheduleAlarm(newAlarm);
+    if (await alarm_pkg.Alarm.hasAlarm()) {
+       // Alarm requires permission on Android 13+, it usually requests on init.
     }
+    await _scheduleAlarmWithPackage(newAlarm, title: title, body: body, stop: stop);
     
     notifyListeners();
   }
 
-  Future<void> toggleAlarm(Alarm alarm) async {
+  Future<void> toggleAlarm(Alarm alarm, {String title = '⏰ YEVMİYE ALARM! ⏰', String body = 'Yevmiyeleri yazmayı unutma!', String stop = 'Kapat'}) async {
     final newStatus = !alarm.isActive;
     final updatedAlarm = alarm.copyWith(isActive: newStatus);
 
@@ -79,18 +110,15 @@ class AlarmProvider with ChangeNotifier {
     }
 
     if (newStatus) {
-      final granted = await NotificationHelper.requestPermissions();
-      if (granted) {
-        await NotificationHelper.scheduleAlarm(updatedAlarm);
-      }
+      await _scheduleAlarmWithPackage(updatedAlarm);
     } else {
       if (updatedAlarm.id != null) {
-        await NotificationHelper.cancelAlarm(updatedAlarm.id!);
+        await alarm_pkg.Alarm.stop(updatedAlarm.id!);
       }
     }
   }
 
-  Future<void> updateAlarm(Alarm alarm) async {
+  Future<void> updateAlarm(Alarm alarm, {String title = '⏰ YEVMİYE ALARM! ⏰', String body = 'Yevmiyeleri yazmayı unutma!', String stop = 'Kapat'}) async {
     await DatabaseHelper.instance.updateAlarm(alarm);
     
     final index = _alarms.indexWhere((a) => a.id == alarm.id);
@@ -100,17 +128,18 @@ class AlarmProvider with ChangeNotifier {
     }
 
     if (alarm.isActive) {
-      await NotificationHelper.scheduleAlarm(alarm);
+      await _scheduleAlarmWithPackage(alarm, title: title, body: body, stop: stop);
     } else if (alarm.id != null) {
-      await NotificationHelper.cancelAlarm(alarm.id!);
+      await alarm_pkg.Alarm.stop(alarm.id!);
     }
   }
 
   Future<void> deleteAlarm(int id) async {
     await DatabaseHelper.instance.deleteAlarm(id);
-    await NotificationHelper.cancelAlarm(id);
+    await alarm_pkg.Alarm.stop(id);
     
-    _alarms.removeWhere((a) => a.id == id);
+    // Fix: Reassign the list so Provider correctly detects the change
+    _alarms = List.from(_alarms)..removeWhere((a) => a.id == id);
     notifyListeners();
   }
 }

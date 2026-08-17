@@ -23,7 +23,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 3,
+      version: 4,
       onCreate: _createDB,
       onUpgrade: _onUpgrade,
       onConfigure: _onConfigure,
@@ -80,6 +80,7 @@ class DatabaseHelper {
         minute INTEGER NOT NULL,
         is_active INTEGER DEFAULT 1,
         label TEXT,
+        ringtone_path TEXT,
         created_at TEXT NOT NULL
       )
     ''');
@@ -168,6 +169,10 @@ class DatabaseHelper {
           'created_at': DateTime.now().toIso8601String(),
         });
       }
+    }
+
+    if (oldVersion < 4) {
+      await db.execute('ALTER TABLE alarms ADD COLUMN ringtone_path TEXT');
     }
   }
 

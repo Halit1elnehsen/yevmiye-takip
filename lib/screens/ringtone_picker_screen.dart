@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:yevmiye_takip/providers/localization_provider.dart';
+import 'package:flutter/services.dart';
 
 
 class RingtonePickerScreen extends StatefulWidget {
@@ -14,13 +15,11 @@ class RingtonePickerScreen extends StatefulWidget {
 }
 
 class _RingtonePickerScreenState extends State<RingtonePickerScreen> {
-  // Varsayılan sistem sesleri (örnek liste)
   final List<Map<String, String>> _defaultRingtones = [
-    {'name': 'Alarm clock', 'duration': '00:03', 'path': 'default'},
-    {'name': 'Beep', 'duration': '00:02', 'path': 'default'},
-    {'name': 'Breeze', 'duration': '00:17', 'path': 'default'},
-    {'name': 'Chimes', 'duration': '00:08', 'path': 'default'},
-    {'name': 'Daydream', 'duration': '00:32', 'path': 'default'},
+    {'name': 'Alarm Clock', 'duration': '00:05', 'path': 'assets/alarm1.wav'},
+    {'name': 'Beep', 'duration': '00:03', 'path': 'assets/alarm2.wav'},
+    {'name': 'Breeze', 'duration': '00:10', 'path': 'assets/ring1.wav'},
+    {'name': 'Chimes', 'duration': '00:08', 'path': 'assets/chimes.wav'},
   ];
 
   // Kullanıcının seçtiği özel ses (Şu an tek bir ses tutuluyor, veritabanına genişletilebilir)
@@ -32,6 +31,73 @@ class _RingtonePickerScreenState extends State<RingtonePickerScreen> {
     if (widget.currentRingtonePath != null && widget.currentRingtonePath != 'default') {
       final name = widget.currentRingtonePath!.split('/').last;
       _myRingtone = {'name': name, 'path': widget.currentRingtonePath!, 'duration': 'Özel Müzik'};
+    }
+  }
+
+  // MethodChannel for native Music Picker
+  static const platform = MethodChannel('com.yevmiye/ringtone');
+
+  Future<void> _showPickerOptions(BuildContext context) async {
+    final locProv = Provider.of<LocalizationProvider>(context, listen: false);
+    
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF16213E),
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 16),
+              Text(locProv.translate('ringtones_title'), style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 16),
+              ListTile(
+                leading: const Icon(Icons.music_note, color: Color(0xFFFF6B35), size: 30),
+                title: Text(locProv.translate('from_music_app') ?? 'Müzik Uygulamasından', style: const TextStyle(color: Colors.white, fontSize: 18)),
+                subtitle: Text(locProv.translate('from_music_app_desc') ?? 'Telefondaki müziklerden seç', style: const TextStyle(color: Colors.grey)),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickMusicNative();
+                },
+              ),
+              const Divider(color: Colors.grey),
+              ListTile(
+                leading: const Icon(Icons.folder, color: Color(0xFFF1C40F), size: 30),
+                title: Text(locProv.translate('from_file_manager') ?? 'Dosya Yöneticisinden', style: const TextStyle(color: Colors.white, fontSize: 18)),
+                subtitle: Text(locProv.translate('from_file_manager_desc') ?? 'Dosyalar uygulamasından seç', style: const TextStyle(color: Colors.grey)),
+                onTap: () {
+                  Navigator.pop(context);
+                  _pickAudioFile();
+                },
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _pickMusicNative() async {
+    try {
+      final Map<dynamic, dynamic>? result = await platform.invokeMethod('pickMusic');
+      if (result != null) {
+        setState(() {
+          _myRingtone = {
+            'name': result['name'] ?? 'Özel Müzik',
+            'path': result['path'] ?? '',
+            'duration': 'Müzik'
+          };
+        });
+      }
+    } on PlatformException catch (e) {
+      if (mounted) {
+        final locProv = Provider.of<LocalizationProvider>(context, listen: false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(locProv.translate('file_error'))),
+        );
+      }
     }
   }
 
@@ -47,7 +113,7 @@ class _RingtonePickerScreenState extends State<RingtonePickerScreen> {
         final name = result.files.single.name;
         
         setState(() {
-          _myRingtone = {'name': name, 'path': path, 'duration': 'Özel Müzik'};
+          _myRingtone = {'name': name, 'path': path, 'duration': 'Dosya'};
         });
       }
     } catch (e) {
@@ -92,24 +158,36 @@ class _RingtonePickerScreenState extends State<RingtonePickerScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Üst Butonlar (Yerel Zil Sesi / Ön Yüklü)
+                  // Banner veya Büyük Seçenekler
                   Row(
                     children: [
                       Expanded(
                         child: GestureDetector(
-                          onTap: _pickAudioFile,
+                          onTap: _pickMusicNative,
                           child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            height: 70,
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
                             decoration: BoxDecoration(
                               color: const Color(0xFF1E1E1E),
                               borderRadius: BorderRadius.circular(16),
                             ),
                             child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                const Icon(Icons.music_note, color: Color(0xFFF39C12)),
-                                const SizedBox(width: 8),
-                                Text(locProv.translate('local_ringtone'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                                Container(
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFFF6B35).withOpacity(0.2),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(Icons.music_note, color: Color(0xFFFF6B35)),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    locProv.translate('from_music_app') ?? 'Choose local ringtone',
+                                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14),
+                                  ),
+                                ),
                               ],
                             ),
                           ),
@@ -117,19 +195,34 @@ class _RingtonePickerScreenState extends State<RingtonePickerScreen> {
                       ),
                       const SizedBox(width: 12),
                       Expanded(
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF1E1E1E),
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(Icons.folder, color: Color(0xFFF1C40F)),
-                              const SizedBox(width: 8),
-                              Text(locProv.translate('preloaded'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                            ],
+                        child: GestureDetector(
+                          onTap: _pickAudioFile,
+                          child: Container(
+                            height: 70,
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF1E1E1E),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF1C40F).withOpacity(0.2),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(Icons.folder, color: Color(0xFFF1C40F)),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    locProv.translate('from_file_manager') ?? 'Pre-installed ringtones',
+                                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
@@ -139,7 +232,7 @@ class _RingtonePickerScreenState extends State<RingtonePickerScreen> {
                   const SizedBox(height: 32),
                   
                   // Benim Zil Seslerim
-                  Text(locProv.translate('my_ringtones'), style: const TextStyle(color: Colors.grey, fontSize: 14)),
+                  Text(locProv.translate('my_ringtones') ?? 'My ringtones', style: const TextStyle(color: Colors.grey, fontSize: 14, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 8),
                 ],
               ),
@@ -161,7 +254,7 @@ class _RingtonePickerScreenState extends State<RingtonePickerScreen> {
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.only(left: 16.0, top: 24.0, bottom: 8.0),
-              child: Text(locProv.translate('system_sounds'), style: const TextStyle(color: Colors.grey, fontSize: 14)),
+              child: Text(locProv.translate('system_sounds') ?? 'Alarms', style: const TextStyle(color: Colors.grey, fontSize: 14, fontWeight: FontWeight.bold)),
             ),
           ),
           
@@ -174,58 +267,36 @@ class _RingtonePickerScreenState extends State<RingtonePickerScreen> {
             ),
           ),
           
-          const SliverToBoxAdapter(child: SizedBox(height: 100)), // FAB için boşluk
+          const SliverToBoxAdapter(child: SizedBox(height: 40)),
         ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _pickAudioFile,
-        backgroundColor: const Color(0xFFFF6B35), // Kullanıcının istediği turuncu renk
-        child: const Icon(Icons.add, color: Colors.white, size: 32),
       ),
     );
   }
 
   Widget _buildRingtoneItem(Map<String, String> ringtone, LocalizationProvider locProv) {
     final bool isSelected = widget.currentRingtonePath == ringtone['path'] || 
-                           (widget.currentRingtonePath == null && ringtone['path'] == 'default');
+                           (widget.currentRingtonePath == null && ringtone['path'] == 'assets/alarm1.wav');
     
-    return InkWell(
-      onTap: () {},
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    ringtone['name']!,
-                    style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    ringtone['duration']!,
-                    style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
-                  ),
-                ],
-              ),
-            ),
-            ElevatedButton(
-              onPressed: () => _applyRingtone(ringtone),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: isSelected ? const Color(0xFFFF6B35) : const Color(0xFF1E1E1E), // Turuncu / Koyu Gri
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-              ),
-              child: Text(isSelected ? locProv.translate('selected') : locProv.translate('apply')),
-            ),
-          ],
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      title: Text(
+        ringtone['name']!,
+        style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+      ),
+      subtitle: Text(
+        ringtone['duration']!,
+        style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
+      ),
+      trailing: ElevatedButton(
+        onPressed: () => _applyRingtone(ringtone),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: isSelected ? const Color(0xFFFF6B35) : const Color(0xFF1E3A5F), // MIUI tarzı koyu mavi
+          foregroundColor: isSelected ? Colors.white : const Color(0xFF64B5F6),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 0),
+          minimumSize: const Size(80, 36),
         ),
+        child: Text(isSelected ? (locProv.translate('selected') ?? 'Selected') : (locProv.translate('apply') ?? 'Apply')),
       ),
     );
   }

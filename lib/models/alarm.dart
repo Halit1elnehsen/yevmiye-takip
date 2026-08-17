@@ -4,6 +4,7 @@ class Alarm {
   final int minute;
   final bool isActive;
   final String label;
+  final String? ringtonePath;
   final String createdAt;
 
   Alarm({
@@ -12,6 +13,7 @@ class Alarm {
     required this.minute,
     this.isActive = true,
     this.label = 'Yevmiye',
+    this.ringtonePath,
     required this.createdAt,
   });
 
@@ -22,6 +24,7 @@ class Alarm {
       'minute': minute,
       'is_active': isActive ? 1 : 0,
       'label': label,
+      'ringtone_path': ringtonePath,
       'created_at': createdAt,
     };
   }
@@ -33,6 +36,7 @@ class Alarm {
       minute: map['minute'],
       isActive: map['is_active'] == 1,
       label: map['label'] ?? '',
+      ringtonePath: map['ringtone_path'],
       createdAt: map['created_at'],
     );
   }
@@ -43,6 +47,7 @@ class Alarm {
     int? minute,
     bool? isActive,
     String? label,
+    String? ringtonePath,
     String? createdAt,
   }) {
     return Alarm(
@@ -51,6 +56,7 @@ class Alarm {
       minute: minute ?? this.minute,
       isActive: isActive ?? this.isActive,
       label: label ?? this.label,
+      ringtonePath: ringtonePath ?? this.ringtonePath,
       createdAt: createdAt ?? this.createdAt,
     );
   }
