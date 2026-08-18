@@ -104,6 +104,8 @@ class AlarmScreen extends StatelessWidget {
       timeText = '${displayHour.toString().padLeft(2, '0')}:${alarm.minute.toString().padLeft(2, '0')}';
     }
     
+    timeText = locProv.formatArabicNumbers(timeText);
+    
     return Dismissible(
       key: Key('alarm_${alarm.id}'),
       direction: DismissDirection.endToStart,

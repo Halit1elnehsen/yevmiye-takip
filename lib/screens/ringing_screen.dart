@@ -63,7 +63,8 @@ class _RingingScreenState extends State<RingingScreen> with SingleTickerProvider
   Widget build(BuildContext context) {
     final locProv = Provider.of<LocalizationProvider>(context);
     final now = DateTime.now();
-    final timeStr = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+    String timeStr = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+    timeStr = locProv.formatArabicNumbers(timeStr);
 
     return Scaffold(
       backgroundColor: const Color(0xFF1A1A2E), // Koyu arka plan

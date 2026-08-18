@@ -3,7 +3,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:yevmiye_takip/providers/localization_provider.dart';
 import 'package:flutter/services.dart';
-
+import 'package:just_audio/just_audio.dart';
 
 class RingtonePickerScreen extends StatefulWidget {
   final String? currentRingtonePath;
@@ -16,11 +16,13 @@ class RingtonePickerScreen extends StatefulWidget {
 
 class _RingtonePickerScreenState extends State<RingtonePickerScreen> {
   final List<Map<String, String>> _defaultRingtones = [
-    {'name': 'Alarm Clock', 'duration': '00:05', 'path': 'assets/alarm1.wav'},
-    {'name': 'Beep', 'duration': '00:03', 'path': 'assets/alarm2.wav'},
-    {'name': 'Breeze', 'duration': '00:10', 'path': 'assets/ring1.wav'},
-    {'name': 'Chimes', 'duration': '00:08', 'path': 'assets/chimes.wav'},
+    {'name': 'Alarm Clock (Loud)', 'duration': '00:05', 'path': 'assets/loud_alarm1.wav'},
+    {'name': 'Digital Alarm (Loud)', 'duration': '00:03', 'path': 'assets/loud_alarm2.wav'},
+    {'name': 'Breeze (Loud)', 'duration': '00:10', 'path': 'assets/loud_ring1.wav'},
+    {'name': 'Chimes (Loud)', 'duration': '00:08', 'path': 'assets/loud_ring2.wav'},
   ];
+
+  final AudioPlayer _audioPlayer = AudioPlayer();
 
   // Kullanıcının seçtiği özel ses (Şu an tek bir ses tutuluyor, veritabanına genişletilebilir)
   Map<String, String>? _myRingtone;
@@ -32,6 +34,12 @@ class _RingtonePickerScreenState extends State<RingtonePickerScreen> {
       final name = widget.currentRingtonePath!.split('/').last;
       _myRingtone = {'name': name, 'path': widget.currentRingtonePath!, 'duration': 'Özel Müzik'};
     }
+  }
+
+  @override
+  void dispose() {
+    _audioPlayer.dispose();
+    super.dispose();
   }
 
   // MethodChannel for native Music Picker
@@ -275,9 +283,23 @@ class _RingtonePickerScreenState extends State<RingtonePickerScreen> {
 
   Widget _buildRingtoneItem(Map<String, String> ringtone, LocalizationProvider locProv) {
     final bool isSelected = widget.currentRingtonePath == ringtone['path'] || 
-                           (widget.currentRingtonePath == null && ringtone['path'] == 'assets/alarm1.wav');
+                           (widget.currentRingtonePath == null && ringtone['path'] == 'assets/loud_alarm1.wav');
     
     return ListTile(
+      onTap: () async {
+        // Önizleme için çal
+        await _audioPlayer.stop();
+        try {
+          if (ringtone['path']!.startsWith('assets/')) {
+             await _audioPlayer.setAsset(ringtone['path']!);
+          } else {
+             await _audioPlayer.setFilePath(ringtone['path']!);
+          }
+          await _audioPlayer.play();
+        } catch (e) {
+          debugPrint('Audio play error: $e');
+        }
+      },
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       title: Text(
         ringtone['name']!,
