@@ -8,12 +8,27 @@ Yevmiye Takip, inşaat şantiyeleri için geliştirilen Flutter tabanlı bir iş
 
 ## Ekran görüntüleri
 
+### İşçi yönetimi ve günlük takip
+
 <p align="center">
-  <img src="docs/images/workers.png" width="320" alt="Yevmiye Takip işçi listesi ve günlük ücret kartı">
-  <img src="docs/images/daily-tracking.png" width="320" alt="Günlük takip, tam gün ve yarım gün kayıtları ile toplam yevmiye">
+  <a href="docs/images/workers-hd.jpg"><img src="docs/images/workers-hd.jpg" width="330" alt="Yevmiye Takip işçi listesi: günlük ücret, çalışma toplamı ve hızlı yevmiye işlemi"></a>
+  <a href="docs/images/daily-tracking-hd.jpg"><img src="docs/images/daily-tracking-hd.jpg" width="330" alt="Yevmiye Takip günlük kayıtları: tam gün, yarım gün, çalışan sayısı ve toplam ücret"></a>
 </p>
 
-Görseller çalışan web önizlemesinden alınmıştır. **Örnek Usta** ve gösterilen ücret yalnızca tanıtım verisidir.
+**İşçi listesi:** günlük ücretleri, çalışma günlerini ve kazanç toplamlarını görüntüle. **Günlük takip:** tarihe göre tam gün, yarım gün ve gelmedi durumlarını seç; toplam yevmiyeyi incele.
+
+### Alarm ve hatırlatma ekranları
+
+<p align="center">
+  <a href="docs/images/alarms-hd.jpg"><img src="docs/images/alarms-hd.jpg" width="330" alt="Yevmiye Takip Alarmlar sayfası: alarm listesi boş durumu ve alarm ekleme düğmesi"></a>
+  <a href="docs/images/add-alarm-hd.jpg"><img src="docs/images/add-alarm-hd.jpg" width="330" alt="Yevmiye Takip Alarm Ekle ekranı: saat seçici, tekrar günleri, alarm sesi, titreşim ve etiket"></a>
+</p>
+
+**Alarmlar:** kayıtlı alarmların listelendiği sayfa; görselde ilk kullanımın boş durumu gösterilir. Ortadaki **+** düğmesi yeni alarm ekranını açar.
+
+**Alarm Ekle:** saat ve dakika seçimi, haftanın günleri, alarm sesi, titreşim ve etiket alanları. Görselde hafta içi tekrar seçenekleri seçilmiştir. Alarmın cihazda çalması işletim sistemi izinlerine ve mobil platform desteğine bağlıdır; web önizlemesi alarm arayüzünü gösterir.
+
+Dört görsel de **1080 × 1920** çözünürlükte, çalışan uygulamadan yeniden alınmıştır. Tam boy görüntülemek için görsele tıkla. İşçi adları ve ücretler yalnızca tanıtım verisidir.
 
 ## Özellikler
 
