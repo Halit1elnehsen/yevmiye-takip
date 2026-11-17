@@ -470,8 +470,8 @@ class LocalizationProvider with ChangeNotifier {
       'alarm_notification_body': 'لا تنس تسجيل اليوميات!',
       'stop_alarm': 'إيقاف',
       'snooze_alarm': 'غفوة ١٠ دقائق',
-      'am_format': 'صباحًا',
-      'pm_format': 'مساءً',
+      'am_format': 'ص',
+      'pm_format': 'م',
     },
   };
 }
