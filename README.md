@@ -12,7 +12,23 @@ Uygulama arayüzü açık krem, orman yeşili ve kiremit tonlarını kullanır. 
 
 ![Yevmiye Takip uygulama simgesi](assets/icon.png)
 
-Arayüzde üç ana bölüm bulunur:
+## Ekran görüntüleri
+
+Aşağıdaki görüntüler uygulamanın güncel telefon arayüzünden alınmıştır. İlk satır çalışan kartlarını ve seçili gündeki yevmiye durumlarını, ikinci satır alarm listesini ve yeni çalışan formunu gösterir. Boş liste görüntülerini eklemedim; dolu ekranlar uygulamanın kullanımını daha iyi anlatıyor.
+
+<p align="center">
+  <a href="docs/images/workers-hd.jpg"><img src="docs/images/workers-hd.jpg" width="280" alt="İşçiler ekranında kayıtlı çalışan kartı, günlük ücret ve hızlı yevmiye düğmesi"></a>
+  <a href="docs/images/daily-tracking-hd.jpg"><img src="docs/images/daily-tracking-hd.jpg" width="280" alt="Günlük Takip ekranında seçili tarih, çalışan ve tam gün, yarım gün, gelmedi seçenekleri"></a>
+</p>
+<p align="center"><strong>İşçiler</strong> · <strong>Günlük Takip</strong></p>
+
+<p align="center">
+  <a href="docs/images/alarms-hd.jpg"><img src="docs/images/alarms-hd.jpg" width="280" alt="Alarmlar ekranında kurulu alarm ve açma kapama düğmesi"></a>
+  <a href="docs/images/add-worker-hd.jpg"><img src="docs/images/add-worker-hd.jpg" width="280" alt="Yeni İşçi Ekle formunda ad, telefon ve günlük ücret alanları"></a>
+</p>
+<p align="center"><strong>Alarmlar</strong> · <strong>Yeni İşçi Ekle</strong></p>
+
+## Ana bölümler
 
 - **İşçiler:** çalışanları, ücretleri ve güncel durumlarını görüntüle; yeni çalışan ekle veya çalışanı pasife al.
 - **Günlük Takip:** tarihi seç, çalışanların tam gün / yarım gün / gelmedi durumlarını kaydet ve günlük toplamı incele.
