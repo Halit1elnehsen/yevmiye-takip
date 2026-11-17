@@ -1,102 +1,80 @@
 # Yevmiye Takip
 
-**Şantiyede günlük emek ve ücret kayıtlarını düzenli tut.**
+Şantiyedeki çalışanları, günlük çalışma durumlarını ve yevmiye kayıtlarını tek yerde takip et.
 
-Yevmiye Takip, inşaat şantiyeleri için geliştirilen Flutter tabanlı bir işçi ve günlük çalışma takibi uygulamasıdır. İşçi bilgilerini, günlük ücretleri ve tam gün / yarım gün / gelmedi kayıtlarını tek yerde yönetir. Veriler yerel veritabanında tutulur; temel kayıt işlemleri için sunucu hesabı gerekmez.
+Yevmiye Takip, Flutter ile geliştirilmiş ve verileri cihazda saklayan bir uygulamadır. Çalışanları ekleyip düzenleyebilir, gün gün tam gün / yarım gün / gelmedi kaydı tutabilir ve günlük toplamları görebilirsin.
 
-[Web önizlemesini aç](https://halidenehsen.netlify.app/previews/yevmiye-takip/) · [Portfolyo](https://halidenehsen.netlify.app/)
+[Web önizlemesini aç](https://halidenehsen.netlify.app/previews/yevmiye-takip/) · [Portfolyo](https://halidenehsen.netlify.app/) · [GitHub deposu](https://github.com/Halit1elnehsen/yevmiye-takip)
 
-## Ekran görüntüleri
+## Arayüz
 
-### İşçi yönetimi ve günlük takip
+Uygulama arayüzü açık krem, orman yeşili ve kiremit tonlarını kullanır. Ayarlardan Türkçe, İngilizce veya Arapça seçilebilir; gece modu tercihi cihazda saklanır.
 
-<p align="center">
-  <a href="docs/images/workers-hd.jpg"><img src="docs/images/workers-hd.jpg" width="330" alt="Yevmiye Takip işçi listesi: günlük ücret, çalışma toplamı ve hızlı yevmiye işlemi"></a>
-  <a href="docs/images/daily-tracking-hd.jpg"><img src="docs/images/daily-tracking-hd.jpg" width="330" alt="Yevmiye Takip günlük kayıtları: tam gün, yarım gün, çalışan sayısı ve toplam ücret"></a>
-</p>
+![Yevmiye Takip uygulama simgesi](assets/icon.png)
 
-**İşçi listesi:** günlük ücretleri, çalışma günlerini ve kazanç toplamlarını görüntüle. **Günlük takip:** tarihe göre tam gün, yarım gün ve gelmedi durumlarını seç; toplam yevmiyeyi incele.
+Arayüzde üç ana bölüm bulunur:
 
-### Alarm ve hatırlatma ekranları
-
-<p align="center">
-  <a href="docs/images/alarms-hd.jpg"><img src="docs/images/alarms-hd.jpg" width="330" alt="Yevmiye Takip Alarmlar sayfası: alarm listesi boş durumu ve alarm ekleme düğmesi"></a>
-  <a href="docs/images/add-alarm-hd.jpg"><img src="docs/images/add-alarm-hd.jpg" width="330" alt="Yevmiye Takip Alarm Ekle ekranı: saat seçici, tekrar günleri, alarm sesi, titreşim ve etiket"></a>
-</p>
-
-**Alarmlar:** kayıtlı alarmların listelendiği sayfa; görselde ilk kullanımın boş durumu gösterilir. Ortadaki **+** düğmesi yeni alarm ekranını açar.
-
-**Alarm Ekle:** saat ve dakika seçimi, haftanın günleri, alarm sesi, titreşim ve etiket alanları. Görselde hafta içi tekrar seçenekleri seçilmiştir. Alarmın cihazda çalması işletim sistemi izinlerine ve mobil platform desteğine bağlıdır; web önizlemesi alarm arayüzünü gösterir.
-
-Dört görsel de **1080 × 1920** çözünürlükte, çalışan uygulamadan yeniden alınmıştır. Tam boy görüntülemek için görsele tıkla. İşçi adları ve ücretler yalnızca tanıtım verisidir.
+- **İşçiler:** çalışanları, ücretleri ve güncel durumlarını görüntüle; yeni çalışan ekle veya çalışanı pasife al.
+- **Günlük Takip:** tarihi seç, çalışanların tam gün / yarım gün / gelmedi durumlarını kaydet ve günlük toplamı incele.
+- **Alarmlar:** hatırlatma saatini ve tekrar günlerini seç; sonraki alarm için kalan süreyi gör.
 
 ## Özellikler
 
-- **İşçi yönetimi:** Ad, isteğe bağlı telefon, günlük ücret ve aktiflik durumu.
-- **Günlük takip:** Tarih seçerek tam gün, yarım gün veya gelmedi kaydı oluşturma.
-- **Ücret hesabı:** Çalışma kayıtlarına göre gün ve kazanç toplamları.
-- **Hızlı işlemler:** İşçi kartından yevmiye yazma ve günlük ekranda kalanları tamamlama.
-- **Yerel veri:** SQLite tabanlı saklama; web sürümünde tarayıcı veritabanı adaptörü.
-- **Dil seçenekleri:** Türkçe, İngilizce ve Arapça; Arapça sayı biçimlendirme desteği.
-- **Mobil yardımcılar:** Alarm ve ses seçimi; JSON yedekleme / geri yükleme akışları.
+- Çalışan adı, isteğe bağlı telefon numarası, günlük ücret ve aktiflik durumu.
+- Tarihe göre tam gün, yarım gün veya gelmedi kaydı.
+- Günlük çalışan sayısı ve yevmiye toplamı.
+- Hızlı yevmiye kaydı ve tarih bazlı günlük durum.
+- Türkçe, İngilizce ve Arapça arayüz; İngilizcede AM/PM, Arapçada yerel rakam ve gün kısaltmaları.
+- Haftanın seçilen günlerinde tekrar eden alarmlar. Seçilmeyen günlerde çalmaz; alarm silinene veya kapatılana kadar tekrar eder.
+- Alarm listesinde sonraki çalma zamanına kalan süre.
+- Alarm çalarken tam ekran durdurma ve 10 dakika erteleme seçenekleri.
+- Uygulama yeniden açıldığında korunan gece modu tercihi.
+- SQLite tabanlı yerel veri saklama.
 
-Örnek kullanım: işçiyi ve günlük ücretini ekle → tarihe göre çalışma durumunu seç → günlük çalışan sayısı ve toplam yevmiyeyi kontrol et.
+## Alarm ve platform bilgisi
 
-## Web ve mobil sürüm
-
-Canlı bağlantı, arayüzü ve temel kayıt akışını denemek içindir. Web verileri kullanılan tarayıcıya aittir; tarayıcı verileri temizlenirse kayıtlar kaybolabilir. İlk yükleme, derleme dosyaları ve bağımlılıklar için internet gerekir. Mobilde yerel veritabanı temel kayıtların çevrimdışı kullanılmasını sağlar.
-
-Alarm, bildirim, zil sesi ve dosya paylaşımı platforma bağlıdır; web önizlemesi bunların mobildeki davranışını garanti etmez. JSON yedekleme kodu dosya sistemi kullandığından bu akış özellikle mobil kullanım içindir. Kayıtları korumak için düzenli yedek almak gerekir.
-
-## Teknolojiler
-
-Flutter / Dart, Material 3, Provider, SQLite (`sqflite`), `sqflite_common_ffi_web`, `intl`, yerel bildirim ve alarm paketleri, dosya seçme ve paylaşım araçları.
+Alarm, bildirim ve tam ekran davranışı mobil işletim sistemine bağlıdır. Android'de bildirim ve tam zamanlı alarm izinlerini aç; Android sürümü isterse tam ekran alarm erişimini de ver. Web önizlemesi arayüzü gösterir, alarm çalmaz. Tarayıcı verileri cihazdaki mobil verilerden ayrıdır.
 
 ## Yerelde çalıştır
 
-Güncel Flutter SDK, Dart 3 ve hedef platform araçları gerekir. Kullanılan paketlerin SDK gereksinimleri `pubspec.yaml` ve `pubspec.lock` dosyalarından çözülür.
+Güncel Flutter SDK ve Dart 3 gerekir.
 
 ```bash
 git clone https://github.com/Halit1elnehsen/yevmiye-takip.git
 cd yevmiye-takip
 flutter pub get
-flutter run -d chrome
+flutter run
 ```
 
-Android cihaz veya emülatör ile:
+Android APK derlemek için:
 
 ```bash
-flutter devices
-flutter run -d <device-id>
+flutter build apk --debug
 ```
 
-## Derleme
-
-```bash
-flutter build apk --release
-flutter build web --release
-```
-
-Bir alt dizine web yayını için:
+Portfolyo sitesindeki alt dizin önizlemesini derlemek için:
 
 ```bash
 flutter build web --release --base-href /previews/yevmiye-takip/
 ```
 
-Web'de SQLite worker / WASM dosyalarının da yayınlanması gerekir. Veritabanı paketi için web kurulum dosyaları eksikse kullanılan paket sürümünün kurulum aracıyla oluşturulmalıdır; Flutter'ın `web/` klasörünü ve tam derleme çıktısını birlikte koru.
+Web çıktısını yayınlarken `build/web` içindeki tüm dosyaları, özellikle SQLite WASM ve worker dosyalarını birlikte kopyala.
+
+## Teknolojiler
+
+Flutter, Dart, Material 3, Provider, SQLite (`sqflite`), `sqflite_common_ffi_web`, `intl`, `alarm`, `just_audio` ve `permission_handler`.
 
 ## Kod yapısı
 
 ```text
 lib/
   screens/       İşçiler, günlük takip, ayarlar ve alarm ekranları
-  providers/     İşçi, çalışma kaydı, ayar, dil ve alarm durumları
-  database/      Yerel veritabanı ve tablo işlemleri
-  models/        İşçi, günlük kayıt ve alarm modelleri
-  utils/         JSON yedekleme ve geri yükleme
-  widgets/       İşçi kartları ve ortak arayüz bileşenleri
-  theme/         Uygulama teması
-docs/images/     README ekran görüntüleri
+  providers/     Çalışan, günlük kayıt, ayar, dil ve alarm durumları
+  database/      Yerel veritabanı işlemleri
+  models/        Çalışan, günlük kayıt ve alarm modelleri
+  widgets/       Ortak arayüz bileşenleri
+  theme/         Açık ve koyu tema
+docs/images/     Uygulama ekran görüntüleri
 ```
 
-Geliştirici: [Halid Elnehsen](https://github.com/Halit1elnehsen)
+Geliştirici: [Halit Elnehsen](https://github.com/Halit1elnehsen)
