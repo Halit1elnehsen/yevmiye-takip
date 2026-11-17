@@ -23,7 +23,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 4,
+      version: 5,
       onCreate: _createDB,
       onUpgrade: _onUpgrade,
       onConfigure: _onConfigure,
@@ -81,6 +81,9 @@ class DatabaseHelper {
         is_active INTEGER DEFAULT 1,
         label TEXT,
         ringtone_path TEXT,
+        repeat_days TEXT NOT NULL DEFAULT '',
+        vibrate INTEGER NOT NULL DEFAULT 1,
+        system_alarm_id INTEGER,
         created_at TEXT NOT NULL
       )
     ''');
@@ -155,9 +158,12 @@ class DatabaseHelper {
       bool isEnabled = false;
 
       for (var map in maps) {
-        if (map['key'] == 'notification_hour') hour = int.tryParse(map['value']) ?? 17;
-        if (map['key'] == 'notification_minute') minute = int.tryParse(map['value']) ?? 0;
-        if (map['key'] == 'notification_enabled') isEnabled = map['value'] == '1';
+        if (map['key'] == 'notification_hour')
+          hour = int.tryParse(map['value']) ?? 17;
+        if (map['key'] == 'notification_minute')
+          minute = int.tryParse(map['value']) ?? 0;
+        if (map['key'] == 'notification_enabled')
+          isEnabled = map['value'] == '1';
       }
 
       if (isEnabled) {
@@ -173,6 +179,14 @@ class DatabaseHelper {
 
     if (oldVersion < 4) {
       await db.execute('ALTER TABLE alarms ADD COLUMN ringtone_path TEXT');
+    }
+
+    if (oldVersion < 5) {
+      await db.execute(
+          "ALTER TABLE alarms ADD COLUMN repeat_days TEXT NOT NULL DEFAULT ''");
+      await db.execute(
+          'ALTER TABLE alarms ADD COLUMN vibrate INTEGER NOT NULL DEFAULT 1');
+      await db.execute('ALTER TABLE alarms ADD COLUMN system_alarm_id INTEGER');
     }
   }
 
@@ -218,7 +232,7 @@ class DatabaseHelper {
   Future<List<Worker>> getAllWorkers({bool onlyActive = false}) async {
     final db = await instance.database;
     final where = onlyActive ? 'WHERE w.is_active = 1' : '';
-    
+
     final result = await db.rawQuery('''
       SELECT w.*, 
         COALESCE(SUM(
@@ -240,7 +254,7 @@ class DatabaseHelper {
       GROUP BY w.id
       ORDER BY w.name ASC
     ''');
-    
+
     return result.map((json) => Worker.fromMap(json)).toList();
   }
 
@@ -348,7 +362,8 @@ class DatabaseHelper {
     return result.map((json) => DailyRecord.fromMap(json)).toList();
   }
 
-  Future<List<DailyRecord>> getDailyRecordsByDateRange(String startDate, String endDate) async {
+  Future<List<DailyRecord>> getDailyRecordsByDateRange(
+      String startDate, String endDate) async {
     final db = await instance.database;
     final result = await db.query(
       'daily_records',
@@ -430,52 +445,10 @@ class DatabaseHelper {
     );
   }
 
-  // ================= YEDEKLEME & GERİ YÜKLEME =================
-
-  Future<Map<String, dynamic>> exportAllData() async {
-    final db = await instance.database;
-    final workers = await db.query('workers');
-    final dailyRecords = await db.query('daily_records');
-    final settings = await db.query('settings');
-
-    return {
-      'workers': workers,
-      'daily_records': dailyRecords,
-      'settings': settings,
-    };
-  }
-
-  Future<void> importAllData(Map<String, dynamic> data) async {
-    final db = await instance.database;
-
-    await db.transaction((txn) async {
-      // 1. Mevcut tüm verileri temizle
-      await txn.delete('daily_records');
-      await txn.delete('workers');
-      await txn.delete('settings');
-
-      // 2. Verileri geri yükle
-      if (data['workers'] != null) {
-        for (var row in data['workers']) {
-          await txn.insert('workers', Map<String, dynamic>.from(row));
-        }
-      }
-      if (data['daily_records'] != null) {
-        for (var row in data['daily_records']) {
-          await txn.insert('daily_records', Map<String, dynamic>.from(row));
-        }
-      }
-      if (data['settings'] != null) {
-        for (var row in data['settings']) {
-          await txn.insert('settings', Map<String, dynamic>.from(row));
-        }
-      }
-    });
-  }
-
   // ================= İSTATİSTİK & RAPORLAR =================
 
-  Future<Map<String, dynamic>> getWorkerSummary(int workerId, String startDate, String endDate) async {
+  Future<Map<String, dynamic>> getWorkerSummary(
+      int workerId, String startDate, String endDate) async {
     final db = await instance.database;
 
     // Yevmiye toplamı
@@ -489,7 +462,8 @@ class DatabaseHelper {
       WHERE worker_id = ? AND date BETWEEN ? AND ?
     ''', [workerId, startDate, endDate]);
 
-    final double earnings = (recordResult.first['total_earnings'] as num?)?.toDouble() ?? 0.0;
+    final double earnings =
+        (recordResult.first['total_earnings'] as num?)?.toDouble() ?? 0.0;
     final int fullDays = recordResult.first['full_days'] as int? ?? 0;
     final int halfDays = recordResult.first['half_days'] as int? ?? 0;
     final int absentDays = recordResult.first['absent_days'] as int? ?? 0;

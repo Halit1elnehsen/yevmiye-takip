@@ -52,7 +52,11 @@ class RecordProvider extends ChangeNotifier {
   }
 
   // İşçinin günlük durumunu güncelle
-  Future<void> updateRecordStatus(Worker worker, WorkStatus status) async {
+  Future<void> updateRecordStatus(
+    Worker worker,
+    WorkStatus status, {
+    String? date,
+  }) async {
     double amount = 0.0;
     if (status == WorkStatus.completed) {
       amount = worker.dailyWage;
@@ -62,14 +66,16 @@ class RecordProvider extends ChangeNotifier {
 
     final record = DailyRecord(
       workerId: worker.id!,
-      date: _currentDate,
+      date: date ?? _currentDate,
       status: status,
       amount: amount,
     );
 
     try {
       await DatabaseHelper.instance.insertDailyRecord(record);
-      _dailyRecords[worker.id!] = record;
+      if (record.date == _currentDate) {
+        _dailyRecords[worker.id!] = record;
+      }
       notifyListeners();
     } catch (e) {
       debugPrint('Record update error: $e');
@@ -80,12 +86,15 @@ class RecordProvider extends ChangeNotifier {
   Future<void> markAllAsCompleted(List<Worker> workers) async {
     try {
       // Sadece henüz kaydı olmayan işçileri filtrele
-      final workersToMark = workers.where((w) => !_dailyRecords.containsKey(w.id)).toList();
-      
-      if (workersToMark.isEmpty) return; // Zaten herkesin kaydı varsa işlem yapma
+      final workersToMark =
+          workers.where((w) => !_dailyRecords.containsKey(w.id)).toList();
 
-      await DatabaseHelper.instance.markAllCompleted(_currentDate, workersToMark);
-      
+      if (workersToMark.isEmpty)
+        return; // Zaten herkesin kaydı varsa işlem yapma
+
+      await DatabaseHelper.instance
+          .markAllCompleted(_currentDate, workersToMark);
+
       for (var worker in workersToMark) {
         _dailyRecords[worker.id!] = DailyRecord(
           workerId: worker.id!,
@@ -114,7 +123,8 @@ class RecordProvider extends ChangeNotifier {
   }
 
   // Rapor verisi yükleyici - tarih aralığına göre kayıtları getir
-  Future<List<DailyRecord>> getRecordsByDateRange(String start, String end) async {
+  Future<List<DailyRecord>> getRecordsByDateRange(
+      String start, String end) async {
     return await DatabaseHelper.instance.getDailyRecordsByDateRange(start, end);
   }
 }

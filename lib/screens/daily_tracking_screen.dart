@@ -5,6 +5,7 @@ import 'package:yevmiye_takip/providers/worker_provider.dart';
 import 'package:yevmiye_takip/providers/record_provider.dart';
 import 'package:yevmiye_takip/widgets/daily_record_tile.dart';
 import 'package:yevmiye_takip/providers/localization_provider.dart';
+import 'package:yevmiye_takip/theme/app_theme.dart';
 
 class DailyTrackingScreen extends StatefulWidget {
   const DailyTrackingScreen({Key? key}) : super(key: key);
@@ -29,8 +30,14 @@ class _DailyTrackingScreenState extends State<DailyTrackingScreen> {
   void _loadData() {
     final dateStr = _dateFormat.format(_selectedDate);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<WorkerProvider>(context, listen: false).loadWorkers(onlyActive: true);
-      Provider.of<RecordProvider>(context, listen: false).loadRecordsByDate(dateStr);
+      Provider.of<WorkerProvider>(
+        context,
+        listen: false,
+      ).loadWorkers();
+      Provider.of<RecordProvider>(
+        context,
+        listen: false,
+      ).loadRecordsByDate(dateStr);
     });
   }
 
@@ -55,12 +62,21 @@ class _DailyTrackingScreenState extends State<DailyTrackingScreen> {
     final locProv = Provider.of<LocalizationProvider>(context);
     final String locale;
     switch (locProv.currentLanguage) {
-      case 'en': locale = 'en_US'; break;
-      case 'ar': locale = 'ar'; break;
-      default: locale = 'tr_TR';
+      case 'en':
+        locale = 'en_US';
+        break;
+      case 'ar':
+        locale = 'ar';
+        break;
+      default:
+        locale = 'tr_TR';
     }
     final displayFormat = DateFormat('dd MMMM yyyy, EEEE', locale);
-    final currencyFormatter = NumberFormat.currency(locale: locale, symbol: '₺', decimalDigits: 0);
+    final currencyFormatter = NumberFormat.currency(
+      locale: locale,
+      symbol: '₺',
+      decimalDigits: 0,
+    );
 
     return Scaffold(
       body: Column(
@@ -68,12 +84,15 @@ class _DailyTrackingScreenState extends State<DailyTrackingScreen> {
           // Tarih Seçici Bölümü
           Container(
             padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-            color: Colors.white.withValues(alpha: 0.02),
+            color: AppTheme.cardBg,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 IconButton(
-                  icon: const Icon(Icons.arrow_back_ios, size: 20),
+                  tooltip: context.watch<LocalizationProvider>().translate(
+                        'previous_day',
+                      ),
+                  icon: const Icon(Icons.chevron_left_rounded, size: 24),
                   onPressed: () => _changeDate(-1),
                 ),
                 Expanded(
@@ -82,12 +101,13 @@ class _DailyTrackingScreenState extends State<DailyTrackingScreen> {
                       Text(
                         displayFormat.format(_selectedDate),
                         style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
                         ),
                         textAlign: TextAlign.center,
                       ),
-                      if (_dateFormat.format(_selectedDate) != _dateFormat.format(DateTime.now()))
+                      if (_dateFormat.format(_selectedDate) !=
+                          _dateFormat.format(DateTime.now()))
                         TextButton(
                           onPressed: _setToday,
                           style: TextButton.styleFrom(
@@ -95,13 +115,20 @@ class _DailyTrackingScreenState extends State<DailyTrackingScreen> {
                             minimumSize: const Size(0, 30),
                             tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                           ),
-                          child: Text(context.watch<LocalizationProvider>().translate('return_today')),
+                          child: Text(
+                            context.watch<LocalizationProvider>().translate(
+                                  'return_today',
+                                ),
+                          ),
                         ),
                     ],
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.arrow_forward_ios, size: 20),
+                  tooltip: context.watch<LocalizationProvider>().translate(
+                        'next_day',
+                      ),
+                  icon: const Icon(Icons.chevron_right_rounded, size: 24),
                   onPressed: () => _changeDate(1),
                 ),
               ],
@@ -116,19 +143,23 @@ class _DailyTrackingScreenState extends State<DailyTrackingScreen> {
                   return const Center(child: CircularProgressIndicator());
                 }
 
-                final workers = workerProv.workers;
+                final workers = workerProv.workers
+                    .where((worker) => worker.isActive)
+                    .toList();
 
                 if (workers.isEmpty) {
                   return Center(
                     child: Text(
-                      context.watch<LocalizationProvider>().translate('no_active_workers_to_track'),
-                      style: const TextStyle(color: Colors.grey),
+                      context.watch<LocalizationProvider>().translate(
+                            'no_active_workers_to_track',
+                          ),
+                      style: TextStyle(color: AppTheme.textMuted),
                     ),
                   );
                 }
 
                 return ListView.builder(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.fromLTRB(18, 12, 18, 18),
                   itemCount: workers.length,
                   itemBuilder: (context, index) {
                     final worker = workers[index];
@@ -139,7 +170,7 @@ class _DailyTrackingScreenState extends State<DailyTrackingScreen> {
                       record: record,
                       onStatusChanged: (status) async {
                         await recordProv.updateRecordStatus(worker, status);
-                        workerProv.loadWorkers(onlyActive: true);
+                        workerProv.loadWorkers();
                       },
                     );
                   },
@@ -151,7 +182,12 @@ class _DailyTrackingScreenState extends State<DailyTrackingScreen> {
           // Alt Özet ve Toplu İşlemler Paneli
           Consumer2<WorkerProvider, RecordProvider>(
             builder: (context, workerProv, recordProv, child) {
-              if (workerProv.workers.isEmpty) return const SizedBox.shrink();
+              final activeWorkers = workerProv.workers
+                  .where((worker) => worker.isActive)
+                  .toList();
+              if (activeWorkers.isEmpty) {
+                return const SizedBox.shrink();
+              }
 
               final total = recordProv.totalDailyPayment;
               final count = recordProv.workingWorkersCount;
@@ -159,7 +195,8 @@ class _DailyTrackingScreenState extends State<DailyTrackingScreen> {
               return Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).cardTheme.color,
+                  color: AppTheme.cardBg,
+                  border: Border(top: BorderSide(color: AppTheme.border)),
                   borderRadius: const BorderRadius.only(
                     topLeft: Radius.circular(20),
                     topRight: Radius.circular(20),
@@ -177,13 +214,21 @@ class _DailyTrackingScreenState extends State<DailyTrackingScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                context.watch<LocalizationProvider>().translate('worker_count'),
-                                style: TextStyle(color: Colors.grey.shade400, fontSize: 13),
+                                context.watch<LocalizationProvider>().translate(
+                                      'worker_count',
+                                    ),
+                                style: TextStyle(
+                                  color: AppTheme.textMuted,
+                                  fontSize: 12,
+                                ),
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                '$count / ${workerProv.workers.length} ${context.watch<LocalizationProvider>().translate('person')}',
-                                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                                '$count / ${activeWorkers.length} ${context.watch<LocalizationProvider>().translate('person')}',
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w700,
+                                ),
                               ),
                             ],
                           ),
@@ -191,16 +236,21 @@ class _DailyTrackingScreenState extends State<DailyTrackingScreen> {
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
                               Text(
-                                context.watch<LocalizationProvider>().translate('total_daily_wage'),
-                                style: TextStyle(color: Colors.grey.shade400, fontSize: 13),
+                                context.watch<LocalizationProvider>().translate(
+                                      'total_daily_wage',
+                                    ),
+                                style: TextStyle(
+                                  color: AppTheme.textMuted,
+                                  fontSize: 12,
+                                ),
                               ),
                               const SizedBox(height: 2),
                               Text(
                                 currencyFormatter.format(total),
                                 style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFFFF6B35),
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppTheme.primary,
                                 ),
                               ),
                             ],
@@ -215,39 +265,62 @@ class _DailyTrackingScreenState extends State<DailyTrackingScreen> {
                             Expanded(
                               child: OutlinedButton.icon(
                                 onPressed: () async {
-                                  await recordProv.undoMarkAll(workerProv.workers);
-                                  workerProv.loadWorkers(onlyActive: true);
+                                  await recordProv.undoMarkAll(activeWorkers);
+                                  workerProv.loadWorkers();
                                   setState(() {
                                     _showUndoButton = false;
                                   });
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text(context.read<LocalizationProvider>().translate('wages_undone'))),
-                                    );
-                                  },
-                                  icon: const Icon(Icons.undo),
-                                  label: Text(context.watch<LocalizationProvider>().translate('undo')),
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        context
+                                            .read<LocalizationProvider>()
+                                            .translate('wages_undone'),
+                                      ),
+                                    ),
+                                  );
+                                },
+                                icon: const Icon(Icons.undo),
+                                label: Text(
+                                  context
+                                      .watch<LocalizationProvider>()
+                                      .translate('undo'),
                                 ),
+                              ),
                             ),
                             const SizedBox(width: 12),
                           ],
                           Expanded(
                             child: ElevatedButton.icon(
                               onPressed: () async {
-                                await recordProv.markAllAsCompleted(workerProv.workers);
-                                workerProv.loadWorkers(onlyActive: true);
+                                await recordProv
+                                    .markAllAsCompleted(activeWorkers);
+                                workerProv.loadWorkers();
                                 setState(() {
                                   _showUndoButton = true;
                                 });
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text(context.read<LocalizationProvider>().translate('remaining_completed_success'))),
+                                  SnackBar(
+                                    content: Text(
+                                      context
+                                          .read<LocalizationProvider>()
+                                          .translate(
+                                            'remaining_completed_success',
+                                          ),
+                                    ),
+                                  ),
                                 );
                               },
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF2ECC71),
+                                backgroundColor: AppTheme.secondary,
                                 foregroundColor: Colors.white,
                               ),
                               icon: const Icon(Icons.done_all),
-                              label: Text(context.watch<LocalizationProvider>().translate('complete_remaining')),
+                              label: Text(
+                                context.watch<LocalizationProvider>().translate(
+                                      'complete_remaining',
+                                    ),
+                              ),
                             ),
                           ),
                         ],
@@ -263,4 +336,3 @@ class _DailyTrackingScreenState extends State<DailyTrackingScreen> {
     );
   }
 }
-

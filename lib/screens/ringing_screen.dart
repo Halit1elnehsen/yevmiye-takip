@@ -1,163 +1,192 @@
-import 'package:flutter/material.dart';
 import 'package:alarm/alarm.dart';
+import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:yevmiye_takip/providers/localization_provider.dart';
 
 class RingingScreen extends StatefulWidget {
   final AlarmSettings alarmSettings;
 
-  const RingingScreen({Key? key, required this.alarmSettings}) : super(key: key);
+  const RingingScreen({super.key, required this.alarmSettings});
 
   @override
   State<RingingScreen> createState() => _RingingScreenState();
 }
 
-class _RingingScreenState extends State<RingingScreen> with SingleTickerProviderStateMixin {
-  late AnimationController _animationController;
-  late Animation<double> _animation;
+class _RingingScreenState extends State<RingingScreen>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pulse;
+  bool _stopping = false;
 
   @override
   void initState() {
     super.initState();
-    _animationController = AnimationController(
+    _pulse = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 500),
+      duration: const Duration(milliseconds: 900),
+      lowerBound: 0.94,
+      upperBound: 1,
     )..repeat(reverse: true);
-    
-    _animation = Tween<double>(begin: -0.1, end: 0.1).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
-    );
   }
 
   @override
   void dispose() {
-    _animationController.dispose();
+    _pulse.dispose();
     super.dispose();
   }
 
   Future<void> _stopAlarm() async {
+    if (_stopping) return;
+    setState(() => _stopping = true);
     await Alarm.stop(widget.alarmSettings.id);
-    if (mounted) {
-      Navigator.pop(context);
-    }
+    if (mounted) Navigator.of(context).pop();
   }
 
   Future<void> _snoozeAlarm() async {
-    final now = DateTime.now();
-    // 10 dakika erteleme
-    final snoozeTime = now.add(const Duration(minutes: 10));
-    
-    final snoozedSettings = widget.alarmSettings.copyWith(
-      dateTime: snoozeTime,
+    if (_stopping) return;
+    setState(() => _stopping = true);
+    final snoozed = widget.alarmSettings.copyWith(
+      dateTime: DateTime.now().add(const Duration(minutes: 10)),
     );
-
     await Alarm.stop(widget.alarmSettings.id);
-    await Alarm.set(alarmSettings: snoozedSettings);
-    
-    if (mounted) {
-      Navigator.pop(context);
-    }
+    await Alarm.set(alarmSettings: snoozed);
+    if (mounted) Navigator.of(context).pop();
   }
 
   @override
   Widget build(BuildContext context) {
-    final locProv = Provider.of<LocalizationProvider>(context);
+    final localization = context.watch<LocalizationProvider>();
     final now = DateTime.now();
-    String timeStr = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
-    timeStr = locProv.formatArabicNumbers(timeStr);
+    final timeText = localization.formatAlarmTime(now.hour, now.minute);
+    final colorScheme = Theme.of(context).colorScheme;
 
-    return Scaffold(
-      backgroundColor: const Color(0xFF1A1A2E), // Koyu arka plan
-      body: SafeArea(
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              AnimatedBuilder(
-                animation: _animation,
-                builder: (context, child) {
-                  return Transform.rotate(
-                    angle: _animation.value,
-                    child: child,
-                  );
-                },
-                child: const Icon(
-                  Icons.alarm,
-                  size: 120,
-                  color: Color(0xFFFF6B35), // Turuncu alarm ikonu
-                ),
-              ),
-              const SizedBox(height: 32),
-              Text(
-                timeStr,
-                style: const TextStyle(
-                  fontSize: 80,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                widget.alarmSettings.notificationSettings.body,
-                style: const TextStyle(
-                  fontSize: 24,
-                  color: Colors.grey,
-                ),
-              ),
-              const SizedBox(height: 80),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  _buildButton(
-                    onTap: _stopAlarm,
-                    icon: Icons.close,
-                    label: locProv.translate('stop_alarm') ?? 'Kapat',
-                    color: const Color(0xFFE74C3C), // Kırmızı
+    return PopScope(
+      canPop: false,
+      child: Scaffold(
+        backgroundColor: const Color(0xFF101512),
+        body: SafeArea(
+          child: LayoutBuilder(
+            builder: (context, constraints) => Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 560),
+                child: Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      ScaleTransition(
+                        scale: _pulse,
+                        child: Container(
+                          width: 104,
+                          height: 104,
+                          decoration: BoxDecoration(
+                            color:
+                                const Color(0xFFC65A2E).withValues(alpha: 0.16),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: const Color(0xFFC65A2E)
+                                  .withValues(alpha: 0.5),
+                              width: 1.5,
+                            ),
+                          ),
+                          child: const Icon(
+                            Icons.alarm_rounded,
+                            size: 48,
+                            color: Color(0xFFF08B5D),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 35),
+                      Text(
+                        localization.translate('alarm_ringing'),
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: Color(0xFFAEB9B0),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 1.8,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          timeText,
+                          style: const TextStyle(
+                            color: Color(0xFFF5F2EA),
+                            fontSize: 72,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: -2.2,
+                            fontFeatures: [FontFeature.tabularFigures()],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      Text(
+                        widget.alarmSettings.notificationSettings.body,
+                        textAlign: TextAlign.center,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Color(0xFFD1D9D2),
+                          fontSize: 20,
+                          height: 1.4,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 52),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 64,
+                        child: FilledButton.icon(
+                          onPressed: _stopping ? null : _stopAlarm,
+                          icon:
+                              const Icon(Icons.stop_circle_outlined, size: 24),
+                          label: Text(
+                            localization.translate('stop_alarm'),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 18,
+                            ),
+                          ),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: const Color(0xFFC65A2E),
+                            foregroundColor: Colors.white,
+                            disabledBackgroundColor: const Color(0xFF74422F),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(18),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 56,
+                        child: OutlinedButton.icon(
+                          onPressed: _stopping ? null : _snoozeAlarm,
+                          icon: const Icon(Icons.snooze_rounded),
+                          label: Text(localization.translate('snooze_alarm')),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: colorScheme.onSurface,
+                            side: const BorderSide(color: Color(0xFF47534A)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(18),
+                            ),
+                            textStyle: const TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 15,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  _buildButton(
-                    onTap: _snoozeAlarm,
-                    icon: Icons.snooze,
-                    label: locProv.translate('snooze_alarm') ?? '10dk Ertele',
-                    color: const Color(0xFFF39C12), // Sarı/Turuncu
-                  ),
-                ],
+                ),
               ),
-            ],
+            ),
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildButton({
-    required VoidCallback onTap,
-    required IconData icon,
-    required String label,
-    required Color color,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.2),
-              shape: BoxShape.circle,
-              border: Border.all(color: color, width: 2),
-            ),
-            child: Icon(icon, size: 40, color: color),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
-          ),
-        ],
       ),
     );
   }

@@ -1,9 +1,15 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 import 'package:yevmiye_takip/screens/ringtone_picker_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:yevmiye_takip/providers/alarm_provider.dart';
 import 'package:yevmiye_takip/providers/localization_provider.dart';
 import 'package:yevmiye_takip/models/alarm.dart';
+import 'package:yevmiye_takip/theme/app_theme.dart';
 
 class AddAlarmScreen extends StatefulWidget {
   final Alarm? alarm;
@@ -17,13 +23,14 @@ class _AddAlarmScreenState extends State<AddAlarmScreen> {
   late int _selectedHour;
   late int _selectedMinute;
   late String _label;
+  late final TextEditingController _labelController;
   bool _vibrate = true;
+  bool _isPm = false;
   String _ringtoneName = 'default';
   String? _ringtonePath;
-  
+
   // Gün tekrarları (0: Pzt, 6: Paz)
   final List<bool> _repeatDays = List.filled(7, false);
-
 
   late FixedExtentScrollController _hourController;
   late FixedExtentScrollController _minuteController;
@@ -31,50 +38,84 @@ class _AddAlarmScreenState extends State<AddAlarmScreen> {
   @override
   void initState() {
     super.initState();
-    
+
     // Eğer alarm düzenleniyorsa değerleri doldur
     if (widget.alarm != null) {
       _selectedHour = widget.alarm!.hour;
       _selectedMinute = widget.alarm!.minute;
       _label = widget.alarm!.label;
+      _ringtonePath = widget.alarm!.ringtonePath;
+      _ringtoneName =
+          _ringtonePath == null ? 'default' : p.basename(_ringtonePath!);
+      _vibrate = widget.alarm!.vibrate;
+      for (final day in widget.alarm!.repeatDays) {
+        if (day >= DateTime.monday && day <= DateTime.sunday) {
+          _repeatDays[day - 1] = true;
+        }
+      }
     } else {
-      _selectedHour = DateTime.now().hour;
-      _selectedMinute = (DateTime.now().minute + 1) % 60;
+      final nextMinute = DateTime.now().add(const Duration(minutes: 1));
+      _selectedHour = nextMinute.hour;
+      _selectedMinute = nextMinute.minute;
       _label = '';
     }
-
-    _hourController = FixedExtentScrollController(initialItem: _selectedHour);
-    _minuteController = FixedExtentScrollController(initialItem: _selectedMinute);
+    _labelController = TextEditingController(text: _label);
+    _isPm = _selectedHour >= 12;
+    final usesAmPm = Provider.of<LocalizationProvider>(context, listen: false)
+            .currentLanguage ==
+        'en';
+    final displayHour = usesAmPm ? ((_selectedHour + 11) % 12) : _selectedHour;
+    _hourController = FixedExtentScrollController(initialItem: displayHour);
+    _minuteController = FixedExtentScrollController(
+      initialItem: _selectedMinute,
+    );
   }
 
   @override
   void dispose() {
     _hourController.dispose();
     _minuteController.dispose();
+    _labelController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final locProv = Provider.of<LocalizationProvider>(context);
-    final dayNames = [locProv.translate('mon'), locProv.translate('tue'), locProv.translate('wed'), locProv.translate('thu'), locProv.translate('fri'), locProv.translate('sat'), locProv.translate('sun')];
+    final dayNames = [
+      locProv.translate('mon'),
+      locProv.translate('tue'),
+      locProv.translate('wed'),
+      locProv.translate('thu'),
+      locProv.translate('fri'),
+      locProv.translate('sat'),
+      locProv.translate('sun'),
+    ];
+    final usesAmPm = locProv.currentLanguage == 'en';
     return Scaffold(
-      backgroundColor: const Color(0xFF1A1A2E), // Arka plan
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.close, color: Colors.white, size: 28),
+          icon: const Icon(Icons.close_rounded, size: 24),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          widget.alarm != null ? locProv.translate('alarm_edit') : locProv.translate('alarm_add'),
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          widget.alarm != null
+              ? locProv.translate('alarm_edit')
+              : locProv.translate('alarm_add'),
+          style: TextStyle(
+            color: AppTheme.textLight,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         centerTitle: true,
         actions: [
           IconButton(
-            icon: const Icon(Icons.check, color: Color(0xFFFF6B35), size: 32),
+            tooltip: locProv.translate('save'),
+            icon: const Icon(
+              Icons.check_rounded,
+              color: AppTheme.primary,
+              size: 28,
+            ),
             onPressed: _saveAlarm,
           ),
         ],
@@ -82,7 +123,7 @@ class _AddAlarmScreenState extends State<AddAlarmScreen> {
       body: Column(
         children: [
           const SizedBox(height: 20),
-          
+
           // Özel Tasarım Kaydırmalı Saat Seçici
           SizedBox(
             height: 200,
@@ -94,7 +135,7 @@ class _AddAlarmScreenState extends State<AddAlarmScreen> {
                   height: 60,
                   margin: const EdgeInsets.symmetric(horizontal: 40),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF16213E),
+                    color: AppTheme.cardBg,
                     borderRadius: BorderRadius.circular(15),
                   ),
                 ),
@@ -111,19 +152,34 @@ class _AddAlarmScreenState extends State<AddAlarmScreen> {
                         diameterRatio: 1.2,
                         physics: const FixedExtentScrollPhysics(),
                         onSelectedItemChanged: (index) {
-                          setState(() => _selectedHour = index);
+                          setState(() {
+                            _selectedHour = usesAmPm
+                                ? (index + 1) % 12 + (_isPm ? 12 : 0)
+                                : index;
+                          });
                         },
                         childDelegate: ListWheelChildBuilderDelegate(
-                          childCount: 24,
+                          childCount: usesAmPm ? 12 : 24,
                           builder: (context, index) {
-                            final isSelected = _selectedHour == index;
+                            final displayHour = usesAmPm
+                                ? ((_selectedHour + 11) % 12)
+                                : _selectedHour;
+                            final isSelected = displayHour == index;
                             return Center(
                               child: Text(
-                                index.toString().padLeft(2, '0'),
+                                locProv.formatArabicNumbers(
+                                  (usesAmPm ? index + 1 : index)
+                                      .toString()
+                                      .padLeft(2, '0'),
+                                ),
                                 style: TextStyle(
                                   fontSize: isSelected ? 40 : 30,
-                                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                                  color: isSelected ? const Color(0xFFFF6B35) : Colors.grey.shade600,
+                                  fontWeight: isSelected
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
+                                  color: isSelected
+                                      ? AppTheme.primary
+                                      : AppTheme.textMuted,
                                 ),
                               ),
                             );
@@ -131,7 +187,14 @@ class _AddAlarmScreenState extends State<AddAlarmScreen> {
                         ),
                       ),
                     ),
-                    const Text(':', style: TextStyle(fontSize: 40, color: Colors.white, fontWeight: FontWeight.bold)),
+                    Text(
+                      ':',
+                      style: TextStyle(
+                        fontSize: 40,
+                        color: AppTheme.textLight,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                     // DAKİKA
                     SizedBox(
                       width: 80,
@@ -150,11 +213,17 @@ class _AddAlarmScreenState extends State<AddAlarmScreen> {
                             final isSelected = _selectedMinute == index;
                             return Center(
                               child: Text(
-                                index.toString().padLeft(2, '0'),
+                                locProv.formatArabicNumbers(
+                                  index.toString().padLeft(2, '0'),
+                                ),
                                 style: TextStyle(
                                   fontSize: isSelected ? 40 : 30,
-                                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                                  color: isSelected ? const Color(0xFFFF6B35) : Colors.grey.shade600,
+                                  fontWeight: isSelected
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
+                                  color: isSelected
+                                      ? AppTheme.primary
+                                      : AppTheme.textMuted,
                                 ),
                               ),
                             );
@@ -162,30 +231,48 @@ class _AddAlarmScreenState extends State<AddAlarmScreen> {
                         ),
                       ),
                     ),
+                    if (usesAmPm) ...[
+                      const SizedBox(width: 8),
+                      Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _buildPeriodButton(locProv, isPm: false),
+                          const SizedBox(height: 6),
+                          _buildPeriodButton(locProv, isPm: true),
+                        ],
+                      ),
+                    ],
                   ],
                 ),
               ],
             ),
           ),
-          
+
           const SizedBox(height: 30),
-          
+
           // Alt Ayarlar
           Expanded(
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              decoration: const BoxDecoration(
-                color: Color(0xFF16213E), // Kart rengi
+              decoration: BoxDecoration(
+                color: AppTheme.cardBg,
                 borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
               ),
               child: ListView(
                 children: [
                   const SizedBox(height: 25),
-                  
+
                   // Gün Seçici (Tekrar)
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                    child: Text(locProv.translate('repeat'), style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                    child: Text(
+                      locProv.translate('repeat'),
+                      style: TextStyle(
+                        color: AppTheme.textLight,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 12),
                   Row(
@@ -199,11 +286,15 @@ class _AddAlarmScreenState extends State<AddAlarmScreen> {
                         },
                         child: CircleAvatar(
                           radius: 20,
-                          backgroundColor: _repeatDays[index] ? const Color(0xFFFF6B35) : const Color(0xFF0F3460),
+                          backgroundColor: _repeatDays[index]
+                              ? AppTheme.primary
+                              : AppTheme.surface,
                           child: Text(
                             dayNames[index],
                             style: TextStyle(
-                              color: _repeatDays[index] ? Colors.white : Colors.grey,
+                              color: _repeatDays[index]
+                                  ? Colors.white
+                                  : AppTheme.textMuted,
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
                             ),
@@ -213,47 +304,73 @@ class _AddAlarmScreenState extends State<AddAlarmScreen> {
                     }),
                   ),
                   const SizedBox(height: 20),
-                  const Divider(color: Color(0xFF0F3460)),
-                  
+                  Divider(color: AppTheme.border),
+
                   // Alarm Sesi (Dosya Seçici)
                   ListTile(
-                    title: Text(locProv.translate('ringtone'), style: const TextStyle(color: Colors.white, fontSize: 18)),
-                    subtitle: Text(_ringtonePath != null ? _ringtoneName : locProv.translate('default_sound'), style: const TextStyle(color: Color(0xFFFF6B35))),
-                    trailing: const Icon(Icons.library_music, color: Colors.grey),
+                    title: Text(
+                      locProv.translate('ringtone'),
+                      style: TextStyle(
+                        color: AppTheme.textLight,
+                        fontSize: 16,
+                      ),
+                    ),
+                    subtitle: Text(
+                      _ringtonePath != null
+                          ? _ringtoneName
+                          : locProv.translate('default_sound'),
+                      style: const TextStyle(color: AppTheme.primary),
+                    ),
+                    trailing: Icon(
+                      Icons.library_music,
+                      color: AppTheme.textMuted,
+                    ),
                     onTap: _pickAudioFile,
                   ),
-                  const Divider(color: Color(0xFF0F3460)),
-                  
+                  Divider(color: AppTheme.border),
+
                   // Titreşim
                   SwitchListTile(
-                    title: Text(locProv.translate('vibrate'), style: const TextStyle(color: Colors.white, fontSize: 18)),
+                    title: Text(
+                      locProv.translate('vibrate'),
+                      style: TextStyle(
+                        color: AppTheme.textLight,
+                        fontSize: 16,
+                      ),
+                    ),
                     value: _vibrate,
-                    activeColor: const Color(0xFFFF6B35),
+                    activeColor: AppTheme.primary,
                     onChanged: (val) {
                       setState(() => _vibrate = val);
                     },
                   ),
-                  const Divider(color: Color(0xFF0F3460)),
-                  
+                  Divider(color: AppTheme.border),
+
                   // Etiket
                   ListTile(
-                    title: Text(locProv.translate('label'), style: const TextStyle(color: Colors.white, fontSize: 18)),
+                    title: Text(
+                      locProv.translate('label'),
+                      style: TextStyle(
+                        color: AppTheme.textLight,
+                        fontSize: 16,
+                      ),
+                    ),
                     trailing: SizedBox(
                       width: 150,
                       child: TextField(
                         textAlign: TextAlign.right,
-                        style: const TextStyle(color: Color(0xFFFF6B35)),
+                        style: TextStyle(color: AppTheme.textLight),
                         decoration: InputDecoration(
                           hintText: locProv.translate('label'),
                           hintStyle: const TextStyle(color: Colors.grey),
                           border: InputBorder.none,
                         ),
                         onChanged: (val) => _label = val,
-                        controller: TextEditingController(text: _label)..selection = TextSelection.fromPosition(TextPosition(offset: _label.length)),
+                        controller: _labelController,
                       ),
                     ),
                   ),
-                  
+
                   // Sil Butonu (sadece düzenleme modunda)
                   if (widget.alarm != null) ...[
                     const SizedBox(height: 20),
@@ -261,13 +378,25 @@ class _AddAlarmScreenState extends State<AddAlarmScreen> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFFE74C3C), // Kırmızı
                         padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(15),
+                        ),
                       ),
                       icon: const Icon(Icons.delete, color: Colors.white),
-                      label: Text(locProv.translate('delete_alarm'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                      label: Text(
+                        locProv.translate('delete_alarm'),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
                       onPressed: () {
                         if (widget.alarm!.id != null) {
-                          Provider.of<AlarmProvider>(context, listen: false).deleteAlarm(widget.alarm!.id!);
+                          Provider.of<AlarmProvider>(
+                            context,
+                            listen: false,
+                          ).deleteAlarm(widget.alarm!.id!);
                           Navigator.pop(context);
                         }
                       },
@@ -283,11 +412,45 @@ class _AddAlarmScreenState extends State<AddAlarmScreen> {
     );
   }
 
+  Widget _buildPeriodButton(
+    LocalizationProvider localization, {
+    required bool isPm,
+  }) {
+    final selected = _isPm == isPm;
+    return SizedBox(
+      width: 52,
+      height: 42,
+      child: OutlinedButton(
+        onPressed: () {
+          setState(() {
+            _isPm = isPm;
+            final hour12 = ((_selectedHour + 11) % 12) + 1;
+            _selectedHour = (hour12 % 12) + (isPm ? 12 : 0);
+          });
+        },
+        style: OutlinedButton.styleFrom(
+          padding: EdgeInsets.zero,
+          foregroundColor: selected ? Colors.white : AppTheme.textMuted,
+          backgroundColor: selected ? AppTheme.primary : AppTheme.surface,
+          side: BorderSide.none,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+        child: Text(
+          localization.translate(isPm ? 'pm_format' : 'am_format'),
+          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+        ),
+      ),
+    );
+  }
+
   Future<void> _pickAudioFile() async {
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => RingtonePickerScreen(currentRingtonePath: _ringtonePath),
+        builder: (context) =>
+            RingtonePickerScreen(currentRingtonePath: _ringtonePath),
       ),
     );
 
@@ -299,76 +462,83 @@ class _AddAlarmScreenState extends State<AddAlarmScreen> {
     }
   }
 
-  void _saveAlarm() async {
-    final prov = Provider.of<AlarmProvider>(context, listen: false);
-    
-    final locProv = Provider.of<LocalizationProvider>(context, listen: false);
-    
-    if (widget.alarm != null) {
-      // Güncelle
-      final updatedAlarm = widget.alarm!.copyWith(
-        hour: _selectedHour,
-        minute: _selectedMinute,
-        label: _label,
-        ringtonePath: _ringtonePath,
-      );
-      await prov.updateAlarm(
-        updatedAlarm,
-        title: locProv.translate('alarm_notification_title') ?? '⏰ YEVMİYE ALARM! ⏰',
-        body: locProv.translate('alarm_notification_body') ?? 'Yevmiyeleri yazmayı unutma!',
-        stop: locProv.translate('close') ?? 'Kapat',
-      );
-    } else {
-      // Yeni Ekle
-      await prov.addAlarm(
-        _selectedHour, 
-        _selectedMinute, 
-        _label, 
-        ringtonePath: _ringtonePath,
-        title: locProv.translate('alarm_notification_title') ?? '⏰ YEVMİYE ALARM! ⏰',
-        body: locProv.translate('alarm_notification_body') ?? 'Yevmiyeleri yazmayı unutma!',
-        stop: locProv.translate('close') ?? 'Kapat',
-      );
-    }
-    
-    // Kalan süreyi hesapla
-    final now = DateTime.now();
-    DateTime alarmDate = DateTime(now.year, now.month, now.day, _selectedHour, _selectedMinute);
-    
-    // Eğer seçilen saat şu andan önceyse, alarm yarına kurulur
-    if (alarmDate.isBefore(now)) {
-      alarmDate = alarmDate.add(const Duration(days: 1));
-    }
-    
-    final difference = alarmDate.difference(now);
-    final hours = difference.inHours;
-    final minutes = difference.inMinutes % 60;
-    
-    String timeRemainingMsg = locProv.translate('time_left');
-    if (hours > 0) timeRemainingMsg += '$hours ${locProv.translate('hours')}';
-    if (minutes > 0) timeRemainingMsg += '$minutes ${locProv.translate('minutes')}';
-    if (hours == 0 && minutes == 0) timeRemainingMsg += locProv.translate('less_than_minute');
-    timeRemainingMsg += locProv.translate('left');
+  Future<void> _saveAlarm() async {
+    final provider = Provider.of<AlarmProvider>(context, listen: false);
+    final localization =
+        Provider.of<LocalizationProvider>(context, listen: false);
+    final ringtonePath = await _persistRingtone();
+    final repeatDays = List<int>.generate(7, (index) => index + 1)
+        .where((day) => _repeatDays[day - 1])
+        .toList();
 
-    if (mounted) {
-      Navigator.pop(context);
-      
-      // Kaydedildiğinde altta kalan süreyi gösteren mesaj (SnackBar)
+    final saved = widget.alarm != null
+        ? await provider.updateAlarm(
+            widget.alarm!.copyWith(
+              hour: _selectedHour,
+              minute: _selectedMinute,
+              label: _labelController.text.trim(),
+              ringtonePath: ringtonePath,
+              repeatDays: repeatDays,
+              vibrate: _vibrate,
+            ),
+            title: localization.translate('alarm_notification_title'),
+            body: localization.translate('alarm_notification_body'),
+            snooze: localization.translate('snooze_alarm'),
+            stop: localization.translate('stop_alarm'),
+          )
+        : await provider.addAlarm(
+            _selectedHour,
+            _selectedMinute,
+            _labelController.text.trim(),
+            ringtonePath: ringtonePath,
+            repeatDays: repeatDays,
+            vibrate: _vibrate,
+            title: localization.translate('alarm_notification_title'),
+            body: localization.translate('alarm_notification_body'),
+            snooze: localization.translate('snooze_alarm'),
+            stop: localization.translate('stop_alarm'),
+          );
+
+    if (!mounted) return;
+    if (!saved) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            timeRemainingMsg,
-            style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
-          ),
-          backgroundColor: const Color(0xFF2ECC71),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          duration: const Duration(seconds: 4),
-        ),
+            content: Text(localization.translate('alarm_permission_required'))),
+      );
+      return;
+    }
+
+    Navigator.pop(context);
+    if (kIsWeb) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(localization.translate('alarm_mobile_only'))),
       );
     }
   }
+
+  Future<String?> _persistRingtone() async {
+    final sourcePath = _ringtonePath;
+    if (sourcePath == null || kIsWeb || sourcePath.startsWith('assets/')) {
+      return sourcePath;
+    }
+
+    try {
+      final directory = await getApplicationDocumentsDirectory();
+      final ringtoneDirectory =
+          Directory(p.join(directory.path, 'alarm_sounds'));
+      await ringtoneDirectory.create(recursive: true);
+      if (p.isWithin(ringtoneDirectory.path, sourcePath)) return sourcePath;
+
+      final extension =
+          p.extension(sourcePath).isEmpty ? '.audio' : p.extension(sourcePath);
+      final fileName = '${DateTime.now().microsecondsSinceEpoch}$extension';
+      final savedFile = await File(sourcePath).copy(
+        p.join(ringtoneDirectory.path, fileName),
+      );
+      return savedFile.path;
+    } catch (error) {
+      debugPrint('Could not persist selected ringtone: $error');
+      return sourcePath;
+    }
+  }
 }
-
-
-

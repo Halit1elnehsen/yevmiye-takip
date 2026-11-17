@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:yevmiye_takip/theme/app_theme.dart';
 
 enum ButtonVariant { primary, success, danger, warning, outlined }
 
@@ -23,7 +24,7 @@ class CustomButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     // Buton renkleri belirleme
     Color bgColor;
     Color fgColor = Colors.white;
@@ -34,13 +35,13 @@ class CustomButton extends StatelessWidget {
         bgColor = theme.primaryColor;
         break;
       case ButtonVariant.success:
-        bgColor = const Color(0xFF2ECC71);
+        bgColor = AppTheme.success;
         break;
       case ButtonVariant.danger:
-        bgColor = const Color(0xFFE74C3C);
+        bgColor = AppTheme.danger;
         break;
       case ButtonVariant.warning:
-        bgColor = const Color(0xFFF39C12);
+        bgColor = AppTheme.warning;
         break;
       case ButtonVariant.outlined:
         bgColor = Colors.transparent;
@@ -83,9 +84,7 @@ class CustomButton extends StatelessWidget {
       backgroundColor: bgColor,
       foregroundColor: fgColor,
       elevation: variant == ButtonVariant.outlined ? 0 : 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
       side: border,
     );
@@ -103,10 +102,7 @@ class CustomButton extends StatelessWidget {
           );
 
     if (isFullWidth) {
-      return SizedBox(
-        width: double.infinity,
-        child: button,
-      );
+      return SizedBox(width: double.infinity, child: button);
     }
 
     return button;

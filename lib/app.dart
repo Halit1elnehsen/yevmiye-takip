@@ -8,6 +8,8 @@ import 'package:yevmiye_takip/screens/home_screen.dart';
 import 'dart:async';
 import 'package:alarm/alarm.dart';
 import 'package:yevmiye_takip/screens/ringing_screen.dart';
+import 'package:yevmiye_takip/providers/alarm_provider.dart';
+import 'package:yevmiye_takip/providers/settings_provider.dart';
 
 class YevmiyeTakipApp extends StatefulWidget {
   const YevmiyeTakipApp({Key? key}) : super(key: key);
@@ -17,23 +19,47 @@ class YevmiyeTakipApp extends StatefulWidget {
 }
 
 class _YevmiyeTakipAppState extends State<YevmiyeTakipApp> {
-  static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+  static final GlobalKey<NavigatorState> navigatorKey =
+      GlobalKey<NavigatorState>();
   StreamSubscription<AlarmSettings>? ringSubscription;
+  final Set<int> _openedRingingIds = {};
 
   @override
   void initState() {
     super.initState();
-    ringSubscription = Alarm.ringStream.stream.listen((alarmSettings) {
-      _navigateToRingingScreen(alarmSettings);
+    ringSubscription = Alarm.ringStream.stream.listen(_handleRingingAlarm);
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      for (final ringing in Alarm.ringing.value.alarms) {
+        await _handleRingingAlarm(ringing);
+      }
     });
   }
 
-  void _navigateToRingingScreen(AlarmSettings alarmSettings) {
-    navigatorKey.currentState?.push(
-      MaterialPageRoute(
-        builder: (context) => RingingScreen(alarmSettings: alarmSettings),
-      ),
+  Future<void> _handleRingingAlarm(AlarmSettings alarmSettings) async {
+    final currentContext = navigatorKey.currentContext;
+    if (currentContext == null || !_openedRingingIds.add(alarmSettings.id)) {
+      return;
+    }
+    final localization = Provider.of<LocalizationProvider>(
+      currentContext,
+      listen: false,
     );
+    await localization.initialized;
+    await Provider.of<AlarmProvider>(currentContext, listen: false)
+        .handleAlarmRinging(
+      alarmSettings,
+      title: localization.translate('alarm_notification_title'),
+      body: localization.translate('alarm_notification_body'),
+      snooze: localization.translate('snooze_alarm'),
+      stop: localization.translate('stop_alarm'),
+    );
+    navigatorKey.currentState
+        ?.push(
+          MaterialPageRoute(
+            builder: (context) => RingingScreen(alarmSettings: alarmSettings),
+          ),
+        )
+        .whenComplete(() => _openedRingingIds.remove(alarmSettings.id));
   }
 
   @override
@@ -44,13 +70,17 @@ class _YevmiyeTakipAppState extends State<YevmiyeTakipApp> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<LocalizationProvider>(
-      builder: (context, localeProv, child) {
+    return Consumer2<LocalizationProvider, SettingsProvider>(
+      builder: (context, localeProv, settingsProv, child) {
+        AppTheme.setDarkMode(settingsProv.darkModeEnabled);
         return MaterialApp(
           navigatorKey: navigatorKey,
           title: 'Yevmiye Takip',
           debugShowCheckedModeBanner: false,
-          theme: AppTheme.darkTheme,
+          theme: AppTheme.lightTheme,
+          darkTheme: AppTheme.darkTheme,
+          themeMode:
+              settingsProv.darkModeEnabled ? ThemeMode.dark : ThemeMode.light,
           home: const HomeScreen(),
           locale: Locale(localeProv.currentLanguage),
           localizationsDelegates: const [

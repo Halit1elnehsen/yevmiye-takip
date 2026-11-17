@@ -5,6 +5,9 @@ class Alarm {
   final bool isActive;
   final String label;
   final String? ringtonePath;
+  final List<int> repeatDays;
+  final bool vibrate;
+  final int? systemAlarmId;
   final String createdAt;
 
   Alarm({
@@ -14,6 +17,9 @@ class Alarm {
     this.isActive = true,
     this.label = 'Yevmiye',
     this.ringtonePath,
+    this.repeatDays = const [],
+    this.vibrate = true,
+    this.systemAlarmId,
     required this.createdAt,
   });
 
@@ -25,6 +31,9 @@ class Alarm {
       'is_active': isActive ? 1 : 0,
       'label': label,
       'ringtone_path': ringtonePath,
+      'repeat_days': repeatDays.join(','),
+      'vibrate': vibrate ? 1 : 0,
+      'system_alarm_id': systemAlarmId,
       'created_at': createdAt,
     };
   }
@@ -37,6 +46,16 @@ class Alarm {
       isActive: map['is_active'] == 1,
       label: map['label'] ?? '',
       ringtonePath: map['ringtone_path'],
+      repeatDays: (map['repeat_days'] as String? ?? '')
+          .split(',')
+          .where((day) => day.isNotEmpty)
+          .map(int.parse)
+          .where((day) => day >= DateTime.monday && day <= DateTime.sunday)
+          .toSet()
+          .toList()
+        ..sort(),
+      vibrate: (map['vibrate'] as int? ?? 1) == 1,
+      systemAlarmId: map['system_alarm_id'] as int?,
       createdAt: map['created_at'],
     );
   }
@@ -48,6 +67,10 @@ class Alarm {
     bool? isActive,
     String? label,
     String? ringtonePath,
+    List<int>? repeatDays,
+    bool? vibrate,
+    int? systemAlarmId,
+    bool clearSystemAlarmId = false,
     String? createdAt,
   }) {
     return Alarm(
@@ -57,6 +80,10 @@ class Alarm {
       isActive: isActive ?? this.isActive,
       label: label ?? this.label,
       ringtonePath: ringtonePath ?? this.ringtonePath,
+      repeatDays: repeatDays ?? this.repeatDays,
+      vibrate: vibrate ?? this.vibrate,
+      systemAlarmId:
+          clearSystemAlarmId ? null : systemAlarmId ?? this.systemAlarmId,
       createdAt: createdAt ?? this.createdAt,
     );
   }

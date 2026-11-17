@@ -4,10 +4,13 @@ import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import android.content.Intent
+import android.app.NotificationManager
+import android.os.Build
 import android.provider.MediaStore
+import android.provider.Settings
 import android.net.Uri
 import java.io.File
-import java.io.FileOutputStream
+import java.util.UUID
 
 class MainActivity: FlutterActivity() {
     private val CHANNEL = "com.yevmiye/ringtone"
@@ -15,6 +18,25 @@ class MainActivity: FlutterActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "com.yevmiye/alarm_permissions").setMethodCallHandler { call, result ->
+            when (call.method) {
+                "hasFullScreenIntentPermission" -> {
+                    val allowed = Build.VERSION.SDK_INT < 34 ||
+                        getSystemService(NotificationManager::class.java).canUseFullScreenIntent()
+                    result.success(allowed)
+                }
+                "openFullScreenIntentSettings" -> {
+                    if (Build.VERSION.SDK_INT >= 34) {
+                        val intent = Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT).apply {
+                            data = Uri.parse("package:$packageName")
+                        }
+                        startActivity(intent)
+                    }
+                    result.success(null)
+                }
+                else -> result.notImplemented()
+            }
+        }
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
             if (call.method == "pickMusic") {
                 pendingResult = result
@@ -32,13 +54,6 @@ class MainActivity: FlutterActivity() {
             val uri: Uri? = data.data
             if (uri != null) {
                 try {
-                    val inputStream = contentResolver.openInputStream(uri)
-                    val file = File(cacheDir, "picked_music.mp3")
-                    val outputStream = FileOutputStream(file)
-                    inputStream?.copyTo(outputStream)
-                    inputStream?.close()
-                    outputStream.close()
-                    
                     var name = "Özel Müzik"
                     val cursor = contentResolver.query(uri, arrayOf(MediaStore.Audio.Media.DISPLAY_NAME), null, null, null)
                     if (cursor != null && cursor.moveToFirst()) {
@@ -47,6 +62,17 @@ class MainActivity: FlutterActivity() {
                             name = cursor.getString(nameIndex)
                         }
                         cursor.close()
+                    }
+
+                    val extension = name.substringAfterLast('.', "audio")
+                        .replace(Regex("[^A-Za-z0-9]"), "")
+                        .ifBlank { "audio" }
+                    val directory = File(filesDir, "alarm_sounds").apply { mkdirs() }
+                    val file = File(directory, "${UUID.randomUUID()}.$extension")
+                    val inputStream = contentResolver.openInputStream(uri)
+                        ?: throw IllegalStateException("Ses dosyası okunamadı")
+                    inputStream.use { input ->
+                        file.outputStream().use { output -> input.copyTo(output) }
                     }
                     
                     val resultMap = mapOf("path" to file.absolutePath, "name" to name)

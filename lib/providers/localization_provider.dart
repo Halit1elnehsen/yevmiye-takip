@@ -7,16 +7,20 @@ class LocalizationProvider with ChangeNotifier {
   String get currentLanguage => _currentLanguage;
 
   LocalizationProvider() {
-    _loadLanguage();
+    initialized = _loadLanguage();
   }
 
-  Future<void> _loadLanguage() async {
+  late final Future<void> initialized;
+
+  Future<void> reloadLanguage() async {
     final lang = await DatabaseHelper.instance.getSetting('language');
-    if (lang != null && lang.isNotEmpty) {
+    if (lang != null && lang.isNotEmpty && lang != _currentLanguage) {
       _currentLanguage = lang;
       notifyListeners();
     }
   }
+
+  Future<void> _loadLanguage() => reloadLanguage();
 
   Future<void> setLanguage(String languageCode) async {
     if (_currentLanguage != languageCode) {
@@ -41,6 +45,37 @@ class LocalizationProvider with ChangeNotifier {
     return result;
   }
 
+  String formatAlarmTime(int hour, int minute) {
+    final usesAmPm = _currentLanguage == 'en';
+    final shownHour = usesAmPm ? ((hour + 11) % 12) + 1 : hour;
+    final time =
+        '${shownHour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
+    if (!usesAmPm) return formatArabicNumbers(time);
+    final period = translate(hour < 12 ? 'am_format' : 'pm_format');
+    return '${formatArabicNumbers(time)} $period';
+  }
+
+  String formatRemainingTime(Duration remaining) {
+    final days = remaining.inDays;
+    final hours = remaining.inHours % 24;
+    final minutes = remaining.inMinutes % 60;
+    final parts = <String>[];
+    if (days > 0) {
+      parts.add('$days ${translate(days == 1 ? 'day_one' : 'day_many')}');
+    }
+    if (hours > 0) {
+      parts.add('$hours ${translate(hours == 1 ? 'hour_one' : 'hours')}');
+    }
+    if (minutes > 0) {
+      parts.add(
+          '$minutes ${translate(minutes == 1 ? 'minute_one' : 'minutes')}');
+    }
+    if (parts.isEmpty) return translate('less_than_minute');
+    return formatArabicNumbers(
+      '${translate('time_left')}${parts.join(' ')} ${translate('left')}',
+    );
+  }
+
   // --- ÇEVİRİ SÖZLÜĞÜ ---
   final Map<String, Map<String, String>> _localizedStrings = {
     'tr': {
@@ -49,6 +84,10 @@ class LocalizationProvider with ChangeNotifier {
       'daily_tracking': 'Günlük Takip',
       'reports': 'Raporlar',
       'settings': 'Ayarlar',
+      'appearance': 'Görünüm',
+      'dark_mode': 'Gece modu',
+      'dark_mode_desc': 'Uygulamanın koyu renklerini kullan',
+      'local_data_note': 'Kayıtların bu cihazda tutulur.',
       'alarms': 'Alarmlar',
       'add_worker': 'Yeni İşçi Ekle',
       'search': 'İşçi ara...',
@@ -64,6 +103,8 @@ class LocalizationProvider with ChangeNotifier {
       'half_day': 'Yarım Gün ½',
       'absent': 'Gelmedi ✗',
       'today': 'Bugün',
+      'previous_day': 'Önceki gün',
+      'next_day': 'Sonraki gün',
       'mark_all_complete': 'Tümünü Tam Gün İşaretle',
       'undo': 'Geri Al',
       'total_workers': 'Çalışan İşçi:',
@@ -77,6 +118,11 @@ class LocalizationProvider with ChangeNotifier {
       'english': 'English',
       'arabic': 'العربية',
       'alarm_add': 'Alarm Ekle',
+      'alarm_permission_required':
+          'Alarm için bildirim, tam zamanlı alarm ve tam ekran izinlerini açın.',
+      'alarm_ringing': 'YEVMİYE ZAMANI',
+      'alarm_mobile_only':
+          'Alarmlar mobil uygulamada çalışır; web sürümü alarm çalmaz.',
       'repeat': 'Tekrar',
       'ringtone': 'Alarm Sesi',
       'vibrate': 'Titreşim',
@@ -84,10 +130,20 @@ class LocalizationProvider with ChangeNotifier {
       'default_sound': 'Varsayılan Ses',
       'time_left': 'Alarm çalmasına ',
       'hours': 'saat ',
+      'hour_one': 'saat',
       'minutes': 'dakika ',
+      'minute_one': 'dakika',
+      'day_one': 'gün',
+      'day_many': 'gün',
       'less_than_minute': '1 dakikadan az ',
       'left': 'kaldı.',
-      'mon': 'Pzt', 'tue': 'Sal', 'wed': 'Çar', 'thu': 'Per', 'fri': 'Cum', 'sat': 'Cmt', 'sun': 'Paz',
+      'mon': 'Pzt',
+      'tue': 'Sal',
+      'wed': 'Çar',
+      'thu': 'Per',
+      'fri': 'Cum',
+      'sat': 'Cmt',
+      'sun': 'Paz',
       'total': 'Toplam',
       'day': 'Gün',
       'no_workers_found': 'Arama kriterine uygun işçi bulunamadı.',
@@ -110,7 +166,8 @@ class LocalizationProvider with ChangeNotifier {
       'delete_worker': 'İşçiyi Sil',
       'worker_updated': 'İşçi bilgileri güncellendi.',
       'worker_added': 'Yeni işçi başarıyla eklendi.',
-      'delete_worker_confirm': '{name} adlı işçiyi silmek istediğinize emin misiniz? Bu işçiye ait tüm geçmiş yevmiye ve avans kayıtları da silinecektir!',
+      'delete_worker_confirm':
+          '{name} adlı işçiyi silmek istediğinize emin misiniz? Bu işçiye ait tüm geçmiş yevmiye ve avans kayıtları da silinecektir!',
       'worker_deleted': 'İşçi başarıyla silindi.',
       'yes_delete': 'Evet, Sil',
       'return_today': 'Bugüne Dön',
@@ -141,8 +198,6 @@ class LocalizationProvider with ChangeNotifier {
       'system_sounds': 'Alarmlar (Sistem Sesleri)',
       'ringtones_title': 'Zil Sesleri',
       'file_error': 'Dosya seçilirken hata oluştu.',
-      'total': 'Toplam',
-      'day': 'Gün',
       'from_music_app': 'Müzik Uygulamasından',
       'from_music_app_desc': 'Telefondaki müziklerden seç',
       'from_file_manager': 'Dosya Yöneticisinden',
@@ -160,6 +215,10 @@ class LocalizationProvider with ChangeNotifier {
       'daily_tracking': 'Daily Tracking',
       'reports': 'Reports',
       'settings': 'Settings',
+      'appearance': 'Appearance',
+      'dark_mode': 'Dark mode',
+      'dark_mode_desc': 'Use the dark colour palette',
+      'local_data_note': 'Your records stay on this device.',
       'alarms': 'Alarms',
       'add_worker': 'Add New Worker',
       'search': 'Search workers...',
@@ -175,6 +234,8 @@ class LocalizationProvider with ChangeNotifier {
       'half_day': 'Half Day ½',
       'absent': 'Absent ✗',
       'today': 'Today',
+      'previous_day': 'Previous day',
+      'next_day': 'Next day',
       'mark_all_complete': 'Mark All as Full Day',
       'undo': 'Undo',
       'total_workers': 'Working:',
@@ -188,6 +249,11 @@ class LocalizationProvider with ChangeNotifier {
       'english': 'English',
       'arabic': 'العربية',
       'alarm_add': 'Add Alarm',
+      'alarm_permission_required':
+          'Allow notifications, exact alarms, and full-screen alarms to continue.',
+      'alarm_ringing': 'WAGE REMINDER',
+      'alarm_mobile_only':
+          'Alarms run in the mobile app; the web version cannot ring.',
       'repeat': 'Repeat',
       'ringtone': 'Ringtone',
       'vibrate': 'Vibrate',
@@ -195,10 +261,20 @@ class LocalizationProvider with ChangeNotifier {
       'default_sound': 'Default Sound',
       'time_left': 'Alarm in ',
       'hours': 'hours ',
+      'hour_one': 'hour',
       'minutes': 'minutes ',
+      'minute_one': 'minute',
+      'day_one': 'day',
+      'day_many': 'days',
       'less_than_minute': 'less than 1 minute ',
       'left': '',
-      'mon': 'Mon', 'tue': 'Tue', 'wed': 'Wed', 'thu': 'Thu', 'fri': 'Fri', 'sat': 'Sat', 'sun': 'Sun',
+      'mon': 'Mon',
+      'tue': 'Tue',
+      'wed': 'Wed',
+      'thu': 'Thu',
+      'fri': 'Fri',
+      'sat': 'Sat',
+      'sun': 'Sun',
       'no_workers_found': 'No workers found matching search criteria.',
       'add_first_worker': 'Add First Worker',
       'wage_added_success': 'Full day wage added for {name} today.',
@@ -219,7 +295,8 @@ class LocalizationProvider with ChangeNotifier {
       'delete_worker': 'Delete Worker',
       'worker_updated': 'Worker information updated.',
       'worker_added': 'New worker added successfully.',
-      'delete_worker_confirm': 'Are you sure you want to delete {name}? All past wage records will also be deleted!',
+      'delete_worker_confirm':
+          'Are you sure you want to delete {name}? All past wage records will also be deleted!',
       'worker_deleted': 'Worker deleted successfully.',
       'yes_delete': 'Yes, Delete',
       'return_today': 'Return to Today',
@@ -269,6 +346,10 @@ class LocalizationProvider with ChangeNotifier {
       'daily_tracking': 'التتبع اليومي',
       'reports': 'التقارير',
       'settings': 'الإعدادات',
+      'appearance': 'المظهر',
+      'dark_mode': 'الوضع الليلي',
+      'dark_mode_desc': 'استخدم ألوان التطبيق الداكنة',
+      'local_data_note': 'تُحفظ سجلاتك على هذا الجهاز.',
       'alarms': 'المنبهات',
       'add_worker': 'إضافة عامل جديد',
       'search': 'البحث عن عمال...',
@@ -284,6 +365,8 @@ class LocalizationProvider with ChangeNotifier {
       'half_day': 'نصف يوم ½',
       'absent': 'غائب ✗',
       'today': 'اليوم',
+      'previous_day': 'اليوم السابق',
+      'next_day': 'اليوم التالي',
       'mark_all_complete': 'تحديد الكل كعمل كامل',
       'undo': 'تراجع',
       'total_workers': 'العمال:',
@@ -297,6 +380,11 @@ class LocalizationProvider with ChangeNotifier {
       'english': 'English',
       'arabic': 'العربية',
       'alarm_add': 'إضافة منبه',
+      'alarm_permission_required':
+          'اسمح بالإشعارات والمنبهات الدقيقة وظهور المنبه بملء الشاشة.',
+      'alarm_ringing': 'حان وقت الأجور',
+      'alarm_mobile_only':
+          'تعمل المنبهات في تطبيق الهاتف؛ نسخة الويب لا تصدر صوتًا.',
       'repeat': 'تكرار',
       'ringtone': 'نغمة الرنين',
       'vibrate': 'اهتزاز',
@@ -304,10 +392,20 @@ class LocalizationProvider with ChangeNotifier {
       'default_sound': 'الصوت الافتراضي',
       'time_left': 'يرن المنبه بعد ',
       'hours': 'ساعات ',
+      'hour_one': 'ساعة',
       'minutes': 'دقائق ',
+      'minute_one': 'دقيقة',
+      'day_one': 'يوم',
+      'day_many': 'أيام',
       'less_than_minute': 'أقل من دقيقة ',
       'left': '',
-      'mon': 'اثن', 'tue': 'ثلا', 'wed': 'أرب', 'thu': 'خمي', 'fri': 'جمع', 'sat': 'سبت', 'sun': 'أحد',
+      'mon': 'إثن',
+      'tue': 'ثلا',
+      'wed': 'أرب',
+      'thu': 'خمي',
+      'fri': 'جمع',
+      'sat': 'سبت',
+      'sun': 'أحد',
       'no_workers_found': 'لم يتم العثور على عمال يطابقون معايير البحث.',
       'add_first_worker': 'إضافة العامل الأول',
       'wage_added_success': 'تم إضافة أجرة يوم كامل لـ {name} اليوم.',
@@ -328,7 +426,8 @@ class LocalizationProvider with ChangeNotifier {
       'delete_worker': 'حذف العامل',
       'worker_updated': 'تم تحديث معلومات العامل.',
       'worker_added': 'تم إضافة عامل جديد بنجاح.',
-      'delete_worker_confirm': 'هل أنت متأكد أنك تريد حذف {name}؟ سيتم حذف جميع السجلات السابقة!',
+      'delete_worker_confirm':
+          'هل أنت متأكد أنك تريد حذف {name}؟ سيتم حذف جميع السجلات السابقة!',
       'worker_deleted': 'تم حذف العامل بنجاح.',
       'yes_delete': 'نعم، احذف',
       'return_today': 'العودة لليوم',
@@ -374,5 +473,3 @@ class LocalizationProvider with ChangeNotifier {
     },
   };
 }
-
-

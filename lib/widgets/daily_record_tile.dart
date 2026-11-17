@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:yevmiye_takip/models/worker.dart';
 import 'package:yevmiye_takip/models/daily_record.dart';
 import 'package:yevmiye_takip/providers/localization_provider.dart';
+import 'package:yevmiye_takip/theme/app_theme.dart';
 
 class DailyRecordTile extends StatelessWidget {
   final Worker worker;
@@ -19,93 +20,108 @@ class DailyRecordTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final locProv = Provider.of<LocalizationProvider>(context);
-    final currencyFormatter = NumberFormat.currency(locale: 'tr_TR', symbol: '₺', decimalDigits: 0);
-    final activeStatus = record?.status;
+    final loc = context.watch<LocalizationProvider>();
+    final locale = loc.currentLanguage == 'en'
+        ? 'en_US'
+        : loc.currentLanguage == 'ar'
+            ? 'ar'
+            : 'tr_TR';
+    final formatter = NumberFormat.currency(
+      locale: locale,
+      symbol: '₺',
+      decimalDigits: 0,
+    );
+    final days = worker.totalDays.toStringAsFixed(
+      worker.totalDays.truncateToDouble() == worker.totalDays ? 0 : 1,
+    );
 
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
       child: Padding(
-        padding: const EdgeInsets.all(12.0),
+        padding: const EdgeInsets.all(14),
         child: Column(
           children: [
-            // İsim ve Yevmiye Bilgisi
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
+                CircleAvatar(
+                  radius: 19,
+                  backgroundColor: const Color(0xFFEAE5DA),
+                  foregroundColor: AppTheme.secondary,
+                  child: Text(
+                    worker.name.trim().isNotEmpty
+                        ? worker.name.trim()[0].toUpperCase()
+                        : '?',
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                ),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         worker.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
-                      const SizedBox(height: 2),
+                      const SizedBox(height: 3),
                       Text(
-                        '${locProv.translate('total')}: ${worker.totalDays.toStringAsFixed(worker.totalDays.truncateToDouble() == worker.totalDays ? 0 : 1)} ${locProv.translate('day')}  •  ${currencyFormatter.format(worker.totalEarnings)}',
+                        '${loc.translate('total')}: $days ${loc.translate('day')}  ·  ${formatter.format(worker.totalEarnings)}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.greenAccent.shade400,
-                          fontWeight: FontWeight.w600,
+                          fontSize: 11,
+                          color: AppTheme.textMuted,
                         ),
                       ),
                     ],
                   ),
                 ),
+                const SizedBox(width: 8),
                 Text(
-                  currencyFormatter.format(worker.dailyWage),
+                  formatter.format(worker.dailyWage),
                   style: const TextStyle(
                     fontSize: 14,
-                    color: Color(0xFFFF6B35),
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.primary,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
-            // Yevmiye Durum Seçim Butonları
+            const SizedBox(height: 14),
             Row(
               children: [
-                // Tam Gün
                 Expanded(
-                  child: _buildStatusButton(
-                    context: context,
-                    label: locProv.translate('full_day').replaceAll(' ✓', ''),
-                    icon: Icons.check_circle_outline,
-                    activeIcon: Icons.check_circle,
-                    buttonStatus: WorkStatus.completed,
-                    activeStatus: activeStatus,
-                    activeColor: const Color(0xFF2ECC71),
+                  child: _statusButton(
+                    context,
+                    loc.translate('full_day').replaceAll(' ✓', ''),
+                    WorkStatus.completed,
+                    AppTheme.success,
+                    Icons.check_rounded,
                   ),
                 ),
                 const SizedBox(width: 8),
-                // Yarım Gün
                 Expanded(
-                  child: _buildStatusButton(
-                    context: context,
-                    label: locProv.translate('half_day').replaceAll(' ½', ''),
-                    icon: Icons.star_half_outlined,
-                    activeIcon: Icons.star_half,
-                    buttonStatus: WorkStatus.half,
-                    activeStatus: activeStatus,
-                    activeColor: const Color(0xFFF39C12),
+                  child: _statusButton(
+                    context,
+                    loc.translate('half_day').replaceAll(' ½', ''),
+                    WorkStatus.half,
+                    AppTheme.warning,
+                    Icons.timelapse_rounded,
                   ),
                 ),
                 const SizedBox(width: 8),
-                // Gelmedi
                 Expanded(
-                  child: _buildStatusButton(
-                    context: context,
-                    label: locProv.translate('absent').replaceAll(' ✗', ''),
-                    icon: Icons.cancel_outlined,
-                    activeIcon: Icons.cancel,
-                    buttonStatus: WorkStatus.absent,
-                    activeStatus: activeStatus,
-                    activeColor: const Color(0xFFE74C3C),
+                  child: _statusButton(
+                    context,
+                    loc.translate('absent').replaceAll(' ✗', ''),
+                    WorkStatus.absent,
+                    AppTheme.danger,
+                    Icons.close_rounded,
                   ),
                 ),
               ],
@@ -116,49 +132,56 @@ class DailyRecordTile extends StatelessWidget {
     );
   }
 
-  Widget _buildStatusButton({
-    required BuildContext context,
-    required String label,
-    required IconData icon,
-    required IconData activeIcon,
-    required WorkStatus buttonStatus,
-    required WorkStatus? activeStatus,
-    required Color activeColor,
-  }) {
-    final isActive = buttonStatus == activeStatus;
-    
-    return Material(
-      color: isActive ? activeColor.withOpacity(0.2) : Colors.transparent,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-        side: BorderSide(
-          color: isActive ? activeColor : Colors.grey.shade700,
-          width: isActive ? 2 : 1,
+  Widget _statusButton(
+    BuildContext context,
+    String label,
+    WorkStatus value,
+    Color color,
+    IconData icon,
+  ) {
+    final active = record?.status == value;
+    return Semantics(
+      button: true,
+      selected: active,
+      label: label,
+      child: Material(
+        color: active ? color.withValues(alpha: 0.1) : const Color(0xFFF7F5F0),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(
+            color: active ? color : AppTheme.border,
+            width: active ? 1.5 : 1,
+          ),
         ),
-      ),
-      child: InkWell(
-        onTap: () => onStatusChanged(buttonStatus),
-        borderRadius: BorderRadius.circular(8),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-          child: Column(
-            children: [
-              Icon(
-                isActive ? activeIcon : icon,
-                color: isActive ? activeColor : Colors.grey.shade400,
-                size: 20,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                label,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-                  color: isActive ? activeColor : Colors.grey.shade400,
+        child: InkWell(
+          onTap: () => onStatusChanged(value),
+          borderRadius: BorderRadius.circular(12),
+          child: SizedBox(
+            height: 48,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  active ? Icons.check_rounded : icon,
+                  color: active ? color : AppTheme.textMuted,
+                  size: 17,
                 ),
-              ),
-            ],
+                const SizedBox(width: 4),
+                Flexible(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: active ? FontWeight.w700 : FontWeight.w600,
+                      color: active ? color : AppTheme.textLight,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
