@@ -61,10 +61,11 @@ class _AddAlarmScreenState extends State<AddAlarmScreen> {
     }
     _labelController = TextEditingController(text: _label);
     _isPm = _selectedHour >= 12;
-    final usesAmPm = Provider.of<LocalizationProvider>(context, listen: false)
-            .currentLanguage ==
-        'en';
-    final displayHour = usesAmPm ? ((_selectedHour + 11) % 12) : _selectedHour;
+    final usesTwelveHourClock =
+        Provider.of<LocalizationProvider>(context, listen: false)
+            .usesTwelveHourClock;
+    final displayHour =
+        usesTwelveHourClock ? ((_selectedHour + 11) % 12) : _selectedHour;
     _hourController = FixedExtentScrollController(initialItem: displayHour);
     _minuteController = FixedExtentScrollController(
       initialItem: _selectedMinute,
@@ -91,7 +92,7 @@ class _AddAlarmScreenState extends State<AddAlarmScreen> {
       locProv.translate('sat'),
       locProv.translate('sun'),
     ];
-    final usesAmPm = locProv.currentLanguage == 'en';
+    final usesTwelveHourClock = locProv.usesTwelveHourClock;
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
@@ -153,22 +154,22 @@ class _AddAlarmScreenState extends State<AddAlarmScreen> {
                         physics: const FixedExtentScrollPhysics(),
                         onSelectedItemChanged: (index) {
                           setState(() {
-                            _selectedHour = usesAmPm
+                            _selectedHour = usesTwelveHourClock
                                 ? (index + 1) % 12 + (_isPm ? 12 : 0)
                                 : index;
                           });
                         },
                         childDelegate: ListWheelChildBuilderDelegate(
-                          childCount: usesAmPm ? 12 : 24,
+                          childCount: usesTwelveHourClock ? 12 : 24,
                           builder: (context, index) {
-                            final displayHour = usesAmPm
+                            final displayHour = usesTwelveHourClock
                                 ? ((_selectedHour + 11) % 12)
                                 : _selectedHour;
                             final isSelected = displayHour == index;
                             return Center(
                               child: Text(
                                 locProv.formatArabicNumbers(
-                                  (usesAmPm ? index + 1 : index)
+                                  (usesTwelveHourClock ? index + 1 : index)
                                       .toString()
                                       .padLeft(2, '0'),
                                 ),
@@ -231,7 +232,7 @@ class _AddAlarmScreenState extends State<AddAlarmScreen> {
                         ),
                       ),
                     ),
-                    if (usesAmPm) ...[
+                    if (usesTwelveHourClock) ...[
                       const SizedBox(width: 8),
                       Column(
                         mainAxisSize: MainAxisSize.min,
@@ -418,7 +419,7 @@ class _AddAlarmScreenState extends State<AddAlarmScreen> {
   }) {
     final selected = _isPm == isPm;
     return SizedBox(
-      width: 52,
+      width: localization.currentLanguage == 'ar' ? 78 : 52,
       height: 42,
       child: OutlinedButton(
         onPressed: () {

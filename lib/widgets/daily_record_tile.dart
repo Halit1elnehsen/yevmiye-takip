@@ -145,7 +145,7 @@ class DailyRecordTile extends StatelessWidget {
       selected: active,
       label: label,
       child: Material(
-        color: active ? color.withValues(alpha: 0.1) : const Color(0xFFF7F5F0),
+        color: active ? color.withValues(alpha: 0.1) : AppTheme.surface,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
           side: BorderSide(

@@ -45,12 +45,14 @@ class LocalizationProvider with ChangeNotifier {
     return result;
   }
 
+  bool get usesTwelveHourClock =>
+      _currentLanguage == 'en' || _currentLanguage == 'ar';
+
   String formatAlarmTime(int hour, int minute) {
-    final usesAmPm = _currentLanguage == 'en';
-    final shownHour = usesAmPm ? ((hour + 11) % 12) + 1 : hour;
+    final shownHour = usesTwelveHourClock ? ((hour + 11) % 12) + 1 : hour;
     final time =
         '${shownHour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
-    if (!usesAmPm) return formatArabicNumbers(time);
+    if (!usesTwelveHourClock) return formatArabicNumbers(time);
     final period = translate(hour < 12 ? 'am_format' : 'pm_format');
     return '${formatArabicNumbers(time)} $period';
   }
@@ -468,8 +470,8 @@ class LocalizationProvider with ChangeNotifier {
       'alarm_notification_body': 'لا تنس تسجيل اليوميات!',
       'stop_alarm': 'إيقاف',
       'snooze_alarm': 'غفوة ١٠ دقائق',
-      'am_format': 'ص',
-      'pm_format': 'م',
+      'am_format': 'صباحًا',
+      'pm_format': 'مساءً',
     },
   };
 }

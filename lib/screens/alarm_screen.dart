@@ -183,7 +183,11 @@ class _AlarmScreenState extends State<AlarmScreen> {
                         Text(
                           timeText,
                           style: TextStyle(
-                            fontSize: locProv.currentLanguage == 'en' ? 34 : 42,
+                            fontSize: locProv.currentLanguage == 'ar'
+                                ? 28
+                                : locProv.currentLanguage == 'en'
+                                    ? 34
+                                    : 42,
                             fontWeight: FontWeight.w400,
                             color: alarm.isActive
                                 ? AppTheme.textLight
