@@ -14,19 +14,31 @@ Uygulama arayüzü açık krem, orman yeşili ve kiremit tonlarını kullanır. 
 
 ## Ekran görüntüleri
 
-Aşağıdaki görüntüler uygulamanın güncel telefon arayüzünden alınmıştır. İlk satır çalışan kartlarını ve seçili gündeki yevmiye durumlarını, ikinci satır alarm listesini ve yeni çalışan formunu gösterir. Boş liste görüntülerini eklemedim; dolu ekranlar uygulamanın kullanımını daha iyi anlatıyor.
+Aşağıdaki ekranlar uygulamadaki temel kullanım sırasına göre verilmiştir. Her görselin hemen altında o ekranda neler yapabileceğin anlatılır.
 
-<p align="center">
-  <a href="docs/images/workers-hd.jpg"><img src="docs/images/workers-hd.jpg" width="280" alt="İşçiler ekranında kayıtlı çalışan kartı, günlük ücret ve hızlı yevmiye düğmesi"></a>
-  <a href="docs/images/daily-tracking-hd.jpg"><img src="docs/images/daily-tracking-hd.jpg" width="280" alt="Günlük Takip ekranında seçili tarih, çalışan ve tam gün, yarım gün, gelmedi seçenekleri"></a>
-</p>
-<p align="center"><strong>İşçiler</strong> · <strong>Günlük Takip</strong></p>
+### 1. İşçileri görüntüle
 
-<p align="center">
-  <a href="docs/images/alarms-hd.jpg"><img src="docs/images/alarms-hd.jpg" width="280" alt="Alarmlar ekranında kurulu alarm ve açma kapama düğmesi"></a>
-  <a href="docs/images/add-worker-hd.jpg"><img src="docs/images/add-worker-hd.jpg" width="280" alt="Yeni İşçi Ekle formunda ad, telefon ve günlük ücret alanları"></a>
-</p>
-<p align="center"><strong>Alarmlar</strong> · <strong>Yeni İşçi Ekle</strong></p>
+<p><a href="docs/images/workers-hd.jpg"><img src="docs/images/workers-hd.jpg" width="360" alt="İşçiler ekranında kayıtlı çalışan kartı, günlük ücret ve hızlı yevmiye düğmesi"></a></p>
+
+Bu ekranda kayıtlı işçileri, günlük ücretlerini ve bugünkü durumlarını görürsün. **Yevmiye** düğmesiyle işçiye hızlıca kayıt ekleyebilir, kalem düğmesiyle bilgilerini düzenleyebilirsin. Yeni bir işçi eklemek için alttaki **Yeni İşçi Ekle** düğmesini kullan.
+
+### 2. Yeni işçi ekle
+
+<p><a href="docs/images/add-worker-hd.jpg"><img src="docs/images/add-worker-hd.jpg" width="360" alt="Yeni İşçi Ekle formunda ad, telefon ve günlük ücret alanları"></a></p>
+
+İşçinin adını ve günlük ücretini gir; telefon numarası isteğe bağlıdır. **Kaydet** dediğinde işçi listene eklenir ve günlük takibe hazır olur.
+
+### 3. Günlük çalışmayı kaydet
+
+<p><a href="docs/images/daily-tracking-hd.jpg"><img src="docs/images/daily-tracking-hd.jpg" width="360" alt="Günlük Takip ekranında seçili tarih, çalışan ve tam gün, yarım gün, gelmedi seçenekleri"></a></p>
+
+Üstteki oklarla tarihi seç. Her işçi için **Tam Gün**, **Yarım Gün** veya **Gelmedi** durumlarından birine dokun. Ekranın altındaki bölüm seçilen gündeki çalışan sayısını ve toplam yevmiyeyi gösterir.
+
+### 4. Alarm kur
+
+<p><a href="docs/images/alarms-hd.jpg"><img src="docs/images/alarms-hd.jpg" width="360" alt="Alarmlar ekranında kurulu alarm ve açma kapama düğmesi"></a></p>
+
+Alarmlar sekmesindeki **+** düğmesiyle hatırlatma oluşturabilirsin. Kurulu alarmı bu listeden açıp kapatabilir, seçtiğin tekrar günlerine göre yevmiye girişini hatırlatabilirsin.
 
 ## Ana bölümler
 
